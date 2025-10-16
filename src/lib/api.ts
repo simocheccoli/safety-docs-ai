@@ -104,3 +104,28 @@ export function downloadZip(id: number): void {
   }
   window.open(`${API_BASE_URL}/api/rischi/${id}/download-zip`, '_blank');
 }
+
+export async function createElaboration(name: string, files: File[]): Promise<void> {
+  if (useMockData) {
+    console.log(`Mock: Creating elaboration "${name}" with ${files.length} files`);
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('title', name);
+  files.forEach((file) => {
+    formData.append('files', file);
+  });
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/rischi`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) throw new Error('API not available');
+  } catch (error) {
+    console.warn('API not available for upload');
+    useMockData = true;
+    throw error;
+  }
+}

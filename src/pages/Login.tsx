@@ -19,6 +19,9 @@ export default function Login() {
     // Simula attesa risposta API
     await new Promise(resolve => setTimeout(resolve, 1500));
     
+    // Salva username
+    localStorage.setItem('username', username);
+    
     setIsLoading(false);
     navigate("/");
   };

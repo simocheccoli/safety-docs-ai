@@ -45,7 +45,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { fetchElaborations, deleteElaboration, downloadExcel, downloadZip } from "@/lib/api";
+import { fetchElaborations, deleteElaboration, downloadExcel, downloadZip, createElaboration } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { DatePicker } from "@/components/ui/date-picker";
 
@@ -91,20 +91,25 @@ export default function SafetySheets() {
     }
   };
 
-  const handleNewElaboration = (name: string, files: File[]) => {
-    const newElaboration: Elaboration = {
-      id: Math.max(...allElaborations.map(e => e.id), 0) + 1,
-      title: name,
-      status: "elaborating",
-      begin_process: new Date().toISOString(),
-      end_process: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      deleted_at: null,
-    };
-    setAllElaborations([newElaboration, ...allElaborations]);
-    setDialogOpen(false);
-    setCurrentPage(1);
+  const handleNewElaboration = async (name: string, files: File[]) => {
+    try {
+      await createElaboration(name, files);
+      
+      toast({
+        title: "Elaborazione creata",
+        description: "L'elaborazione è stata avviata con successo",
+      });
+
+      await loadElaborations();
+      setDialogOpen(false);
+      setCurrentPage(1);
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile creare l'elaborazione",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleViewDetails = (elaboration: Elaboration) => {

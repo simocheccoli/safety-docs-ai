@@ -1,4 +1,4 @@
-import { Home, FlaskConical, FileText, LogOut } from "lucide-react";
+import { Home, FlaskConical, FileText, LogOut, User } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -13,6 +13,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -24,8 +25,10 @@ const riskItems = [
 
 export function AppSidebar() {
   const navigate = useNavigate();
+  const username = localStorage.getItem('username') || 'Utente';
 
   const handleLogout = () => {
+    localStorage.removeItem('username');
     navigate("/login");
   };
 
@@ -98,6 +101,23 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-3">
+        <div className="px-3 py-3 mb-2">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-9 w-9">
+              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                {username.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">
+                {username}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Connesso
+              </p>
+            </div>
+          </div>
+        </div>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleLogout} className="text-sidebar-foreground hover:bg-sidebar-accent/50">
