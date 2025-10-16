@@ -1,6 +1,6 @@
-import { LayoutDashboard, FlaskConical, FileText } from "lucide-react";
+import { LayoutDashboard, FlaskConical, FileText, LogOut } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import logo from "@/assets/logo.png";
+import { Button } from "@/components/ui/button";
 
 import {
   Sidebar,
@@ -14,6 +14,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -33,8 +34,17 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
-          <div className="flex items-center gap-2 px-2 py-4">
-            <img src={logo} alt="BIO5 Logo" className="h-8 w-auto" />
+          <div className="flex items-center justify-center px-4 py-6">
+            {!isCollapsed && (
+              <h1 className="font-display text-2xl font-bold text-sidebar-foreground">
+                HSEB5
+              </h1>
+            )}
+            {isCollapsed && (
+              <span className="font-display text-xl font-bold text-sidebar-foreground">
+                H5
+              </span>
+            )}
           </div>
         </SidebarGroup>
 
@@ -80,6 +90,23 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+                onClick={() => window.location.href = '/login'}
+              >
+                <LogOut />
+                {!isCollapsed && <span>Esci</span>}
+              </Button>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
