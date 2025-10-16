@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Download, Eye, Trash2, Archive, Filter } from "lucide-react";
+import { Plus, Download, Eye, Trash2, Archive, X, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NewElaborationDialog } from "@/components/NewElaborationDialog";
@@ -13,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -46,6 +45,8 @@ export default function SafetySheets() {
   const [selectedElaboration, setSelectedElaboration] = useState<Elaboration | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateFromFilter, setDateFromFilter] = useState("");
+  const [dateToFilter, setDateToFilter] = useState("");
 
   useEffect(() => {
     loadElaborations();
@@ -133,19 +134,62 @@ export default function SafetySheets() {
 
   const getStatusBadge = (status: string) => {
     const configs = {
-      elaborating: { label: "In elaborazione", className: "bg-warning text-warning-foreground" },
-      completed: { label: "Completato", className: "bg-success text-success-foreground" },
-      error: { label: "Errore", className: "bg-destructive text-destructive-foreground" },
+      elaborating: { 
+        label: "In elaborazione", 
+        dotColor: "bg-warning",
+        textColor: "text-muted-foreground"
+      },
+      completed: { 
+        label: "Completato", 
+        dotColor: "bg-success",
+        textColor: "text-muted-foreground"
+      },
+      error: { 
+        label: "Errore", 
+        dotColor: "bg-destructive",
+        textColor: "text-muted-foreground"
+      },
     };
     const config = configs[status as keyof typeof configs];
-    return <Badge className={config.className}>{config.label}</Badge>;
+    return (
+      <div className="flex items-center gap-2">
+        <div className={`h-2 w-2 rounded-full ${config.dotColor}`} />
+        <span className={`text-sm ${config.textColor}`}>{config.label}</span>
+      </div>
+    );
   };
 
   const filteredElaborations = elaborations.filter((elab) => {
     const matchesSearch = elab.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || elab.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    
+    let matchesDateFrom = true;
+    let matchesDateTo = true;
+    
+    if (dateFromFilter) {
+      const elaborationDate = new Date(elab.begin_process);
+      const filterDate = new Date(dateFromFilter);
+      matchesDateFrom = elaborationDate >= filterDate;
+    }
+    
+    if (dateToFilter) {
+      const elaborationDate = new Date(elab.begin_process);
+      const filterDate = new Date(dateToFilter);
+      filterDate.setHours(23, 59, 59, 999);
+      matchesDateTo = elaborationDate <= filterDate;
+    }
+    
+    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
   });
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setDateFromFilter("");
+    setDateToFilter("");
+  };
+
+  const hasActiveFilters = searchQuery || statusFilter !== "all" || dateFromFilter || dateToFilter;
 
   const totalPages = Math.ceil(totalElaborations / perPage);
 
@@ -234,45 +278,94 @@ export default function SafetySheets() {
         </div>
         <Button 
           onClick={() => setDialogOpen(true)} 
-          size="lg"
+          variant="outline"
           className="gap-2"
         >
-          <Plus className="h-5 w-5" />
+          <Plus className="h-4 w-4" />
           Nuova Elaborazione
         </Button>
       </div>
 
-      <div className="flex gap-4 items-end">
-        <div className="flex-1">
-          <Input
-            placeholder="Cerca per titolo..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-sm"
-          />
+      <div className="bg-card border rounded-lg p-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="md:col-span-2">
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Cerca per titolo
+            </label>
+            <Input
+              placeholder="Filtra per titolo..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Stato
+            </label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Tutti gli stati" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutti gli stati</SelectItem>
+                <SelectItem value="elaborating">In elaborazione</SelectItem>
+                <SelectItem value="completed">Completato</SelectItem>
+                <SelectItem value="error">Errore</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-end">
+            {hasActiveFilters && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={clearFilters}
+                className="w-full gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+                Cancella filtri
+              </Button>
+            )}
+          </div>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Filtra per stato" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tutti gli stati</SelectItem>
-            <SelectItem value="elaborating">In elaborazione</SelectItem>
-            <SelectItem value="completed">Completato</SelectItem>
-            <SelectItem value="error">Errore</SelectItem>
-          </SelectContent>
-        </Select>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5" />
+              Data inizio da
+            </label>
+            <Input
+              type="date"
+              value={dateFromFilter}
+              onChange={(e) => setDateFromFilter(e.target.value)}
+            />
+          </div>
+          
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5" />
+              Data inizio a
+            </label>
+            <Input
+              type="date"
+              value={dateToFilter}
+              onChange={(e) => setDateToFilter(e.target.value)}
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="border rounded-lg">
+      <div className="bg-card border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="font-semibold">Titolo</TableHead>
-              <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="font-semibold">Inizio Elaborazione</TableHead>
-              <TableHead className="text-right font-semibold">Azioni</TableHead>
+            <TableRow className="bg-muted/30">
+              <TableHead className="font-medium text-foreground">Titolo</TableHead>
+              <TableHead className="font-medium text-foreground">Stato</TableHead>
+              <TableHead className="font-medium text-foreground">Data Inizio</TableHead>
+              <TableHead className="text-right font-medium text-foreground">Azioni</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -284,37 +377,40 @@ export default function SafetySheets() {
               </TableRow>
             ) : (
               filteredElaborations.map((elaboration) => (
-                <TableRow key={elaboration.id}>
+                <TableRow key={elaboration.id} className="hover:bg-muted/20">
                   <TableCell className="font-medium">{elaboration.title}</TableCell>
                   <TableCell>{getStatusBadge(elaboration.status)}</TableCell>
-                  <TableCell>{formatDate(elaboration.begin_process)}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatDate(elaboration.begin_process)}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2 justify-end">
+                    <div className="flex gap-1 justify-end">
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleViewDetails(elaboration)}
                         title="Visualizza schede PDF"
+                        className="hover:bg-muted"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-4 w-4 text-muted-foreground" />
                       </Button>
-                       {elaboration.status === "completed" && (
+                      {elaboration.status === "completed" && (
                         <>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDownloadExcel(elaboration.id)}
                             title="Scarica Excel"
+                            className="hover:bg-muted"
                           >
-                            <Download className="h-4 w-4" />
+                            <Download className="h-4 w-4 text-muted-foreground" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDownloadZip(elaboration.id)}
                             title="Scarica ZIP schede"
+                            className="hover:bg-muted"
                           >
-                            <Archive className="h-4 w-4" />
+                            <Archive className="h-4 w-4 text-muted-foreground" />
                           </Button>
                         </>
                       )}
@@ -323,9 +419,9 @@ export default function SafetySheets() {
                         size="icon"
                         onClick={() => handleDelete(elaboration.id)}
                         title="Elimina"
-                        className="text-destructive hover:text-destructive"
+                        className="hover:bg-destructive/10"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 text-destructive/70" />
                       </Button>
                     </div>
                   </TableCell>
