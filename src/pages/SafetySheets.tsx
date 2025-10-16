@@ -29,6 +29,22 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { fetchElaborations, deleteElaboration, downloadExcel, downloadZip } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,6 +63,8 @@ export default function SafetySheets() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFromFilter, setDateFromFilter] = useState("");
   const [dateToFilter, setDateToFilter] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [elaborationToDelete, setElaborationToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     loadElaborations();
@@ -89,9 +107,16 @@ export default function SafetySheets() {
     setDetailsDialogOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDeleteClick = (id: number) => {
+    setElaborationToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (elaborationToDelete === null) return;
+    
     try {
-      await deleteElaboration(id);
+      await deleteElaboration(elaborationToDelete);
       toast({
         title: "Successo",
         description: "Elaborazione eliminata con successo",
@@ -103,6 +128,9 @@ export default function SafetySheets() {
         description: "Impossibile eliminare l'elaborazione",
         variant: "destructive",
       });
+    } finally {
+      setDeleteDialogOpen(false);
+      setElaborationToDelete(null);
     }
   };
 
@@ -266,7 +294,8 @@ export default function SafetySheets() {
   };
 
   return (
-    <div className="space-y-6">
+    <TooltipProvider>
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground tracking-tight">
@@ -383,46 +412,73 @@ export default function SafetySheets() {
                   <TableCell className="text-muted-foreground">{formatDate(elaboration.begin_process)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleViewDetails(elaboration)}
-                        title="Visualizza schede PDF"
-                        className="hover:bg-muted"
-                      >
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleViewDetails(elaboration)}
+                            className="hover:bg-muted"
+                          >
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Visualizza schede PDF</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      
                       {elaboration.status === "completed" && (
                         <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDownloadExcel(elaboration.id)}
-                            title="Scarica Excel"
-                            className="hover:bg-muted"
-                          >
-                            <Download className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDownloadZip(elaboration.id)}
-                            title="Scarica ZIP schede"
-                            className="hover:bg-muted"
-                          >
-                            <Archive className="h-4 w-4 text-muted-foreground" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDownloadExcel(elaboration.id)}
+                                className="hover:bg-muted"
+                              >
+                                <Download className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Scarica report Excel</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDownloadZip(elaboration.id)}
+                                className="hover:bg-muted"
+                              >
+                                <Archive className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Scarica archivio ZIP delle schede</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(elaboration.id)}
-                        title="Elimina"
-                        className="hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive/70" />
-                      </Button>
+                      
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteClick(elaboration.id)}
+                            className="hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive/70" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Elimina elaborazione</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -467,6 +523,27 @@ export default function SafetySheets() {
         onOpenChange={setDetailsDialogOpen}
         elaboration={selectedElaboration}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Conferma eliminazione</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare questa elaborazione? Questa azione non può essere annullata e tutti i dati associati verranno rimossi definitivamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Elimina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+    </TooltipProvider>
   );
 }
