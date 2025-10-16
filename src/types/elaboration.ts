@@ -1,12 +1,12 @@
-export type ElaborationStatus = 'processing' | 'completed' | 'error';
+export type ElaborationStatus = 'elaborating' | 'completed' | 'error';
 
 export interface Elaboration {
-  id: string;
-  name: string;
+  id: number;
+  title: string;
   status: ElaborationStatus;
-  filesCount: number;
-  createdAt: Date;
-  completedAt?: Date;
-  excelUrl?: string;
-  progress?: number;
+  begin_process: string;
+  end_process: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
 }

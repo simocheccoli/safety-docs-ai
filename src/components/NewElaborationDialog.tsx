@@ -6,16 +6,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-export const NewElaborationDialog = () => {
-  const [open, setOpen] = useState(false);
+interface NewElaborationDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (name: string, files: File[]) => void;
+}
+
+export const NewElaborationDialog = ({ open, onOpenChange, onSubmit }: NewElaborationDialogProps) => {
   const [name, setName] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const { toast } = useToast();
@@ -61,25 +65,18 @@ export const NewElaborationDialog = () => {
       return;
     }
 
-    // Here you would normally send the data to your API
     toast({
       title: "Elaborazione avviata",
       description: `${files.length} schede caricate con successo`,
     });
 
-    setOpen(false);
+    onSubmit(name, files);
     setName("");
     setFiles([]);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="lg" className="gap-2">
-          <Plus className="h-5 w-5" />
-          Nuova Elaborazione
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>Nuova Elaborazione</DialogTitle>
@@ -145,7 +142,7 @@ export const NewElaborationDialog = () => {
           )}
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Annulla
           </Button>
           <Button type="button" onClick={handleSubmit}>
