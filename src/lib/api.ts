@@ -1,6 +1,6 @@
 import { Elaboration } from "@/types/elaboration";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://hseb5-api.neurally.it";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8056";
 
 // Mock data for fallback
 const MOCK_ELABORATIONS: Elaboration[] = Array.from({ length: 50 }, (_, i) => ({
