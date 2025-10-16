@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/tooltip";
 import { fetchElaborations, deleteElaboration, downloadExcel, downloadZip } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { DatePicker } from "@/components/ui/date-picker";
 
 type SortField = 'title' | 'status' | 'begin_process';
 type SortDirection = 'asc' | 'desc' | null;
@@ -63,8 +64,8 @@ export default function SafetySheets() {
   const [selectedElaboration, setSelectedElaboration] = useState<Elaboration | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [dateFromFilter, setDateFromFilter] = useState("");
-  const [dateToFilter, setDateToFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [elaborationToDelete, setElaborationToDelete] = useState<number | null>(null);
   const [sortField, setSortField] = useState<SortField | null>(null);
@@ -227,16 +228,19 @@ export default function SafetySheets() {
     let matchesDateFrom = true;
     let matchesDateTo = true;
     
-    if (dateFromFilter) {
+    if (dateFrom) {
       const elaborationDate = new Date(elab.begin_process);
-      const filterDate = new Date(dateFromFilter);
+      elaborationDate.setHours(0, 0, 0, 0);
+      const filterDate = new Date(dateFrom);
+      filterDate.setHours(0, 0, 0, 0);
       matchesDateFrom = elaborationDate >= filterDate;
     }
     
-    if (dateToFilter) {
+    if (dateTo) {
       const elaborationDate = new Date(elab.begin_process);
-      const filterDate = new Date(dateToFilter);
-      filterDate.setHours(23, 59, 59, 999);
+      elaborationDate.setHours(0, 0, 0, 0);
+      const filterDate = new Date(dateTo);
+      filterDate.setHours(0, 0, 0, 0);
       matchesDateTo = elaborationDate <= filterDate;
     }
     
@@ -273,14 +277,14 @@ export default function SafetySheets() {
   const clearFilters = () => {
     setSearchQuery("");
     setStatusFilter("all");
-    setDateFromFilter("");
-    setDateToFilter("");
+    setDateFrom(undefined);
+    setDateTo(undefined);
     setSortField(null);
     setSortDirection(null);
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = searchQuery || statusFilter !== "all" || dateFromFilter || dateToFilter || sortField !== null;
+  const hasActiveFilters = searchQuery || statusFilter !== "all" || dateFrom || dateTo || sortField !== null;
 
   const renderPaginationItems = () => {
     const items = [];
@@ -427,10 +431,10 @@ export default function SafetySheets() {
               <Calendar className="h-3.5 w-3.5" />
               Data inizio da
             </label>
-            <Input
-              type="date"
-              value={dateFromFilter}
-              onChange={(e) => setDateFromFilter(e.target.value)}
+            <DatePicker 
+              date={dateFrom} 
+              onSelect={setDateFrom}
+              placeholder="Seleziona data inizio"
             />
           </div>
           
@@ -439,10 +443,10 @@ export default function SafetySheets() {
               <Calendar className="h-3.5 w-3.5" />
               Data inizio a
             </label>
-            <Input
-              type="date"
-              value={dateToFilter}
-              onChange={(e) => setDateToFilter(e.target.value)}
+            <DatePicker 
+              date={dateTo} 
+              onSelect={setDateTo}
+              placeholder="Seleziona data fine"
             />
           </div>
         </div>

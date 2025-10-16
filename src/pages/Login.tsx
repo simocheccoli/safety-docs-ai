@@ -4,15 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login - accetta qualsiasi credenziale
+    setIsLoading(true);
+    
+    // Simula attesa risposta API
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setIsLoading(false);
     navigate("/");
   };
 
@@ -39,6 +46,7 @@ export default function Login() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
+                disabled={isLoading}
                 className="h-11"
               />
             </div>
@@ -51,11 +59,19 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
                 className="h-11"
               />
             </div>
-            <Button type="submit" className="w-full h-11 mt-6">
-              Accedi
+            <Button type="submit" className="w-full h-11 mt-6" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Accesso in corso...
+                </>
+              ) : (
+                "Accedi"
+              )}
             </Button>
           </form>
         </CardContent>
