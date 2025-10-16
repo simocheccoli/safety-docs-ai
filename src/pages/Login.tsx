@@ -1,16 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { login, initializeUsers } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    initializeUsers();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,11 +26,19 @@ export default function Login() {
     // Simula attesa risposta API
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Salva username
-    localStorage.setItem('username', username);
+    const user = login(email, password);
     
-    setIsLoading(false);
-    navigate("/");
+    if (user) {
+      setIsLoading(false);
+      navigate("/");
+    } else {
+      setIsLoading(false);
+      toast({
+        title: "Errore di accesso",
+        description: "Email o password non corretti, oppure utente disattivato",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -41,13 +56,13 @@ export default function Login() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="Inserisci username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="Inserisci email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
                 className="h-11"

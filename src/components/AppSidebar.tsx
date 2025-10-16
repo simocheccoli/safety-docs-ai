@@ -1,4 +1,4 @@
-import { Home, FlaskConical, FileText, LogOut, User } from "lucide-react";
+import { Home, FlaskConical, FileText, LogOut, User, Users } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { getCurrentUser, logout } from "@/lib/auth";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -25,10 +26,12 @@ const riskItems = [
 
 export function AppSidebar() {
   const navigate = useNavigate();
-  const username = localStorage.getItem('username') || 'Utente';
+  const currentUser = getCurrentUser();
+  const username = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Utente';
+  const isAdmin = currentUser?.role === 'Admin';
 
   const handleLogout = () => {
-    localStorage.removeItem('username');
+    logout();
     navigate("/login");
   };
 
@@ -98,6 +101,36 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isAdmin && (
+          <>
+            <Separator className="my-4" />
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground px-3 mb-2">
+                Amministrazione
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to="/users"
+                        className={({ isActive }) => 
+                          isActive 
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        }
+                      >
+                        <Users className="h-4 w-4" />
+                        <span>Utenti</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-3">

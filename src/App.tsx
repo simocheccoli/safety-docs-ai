@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import SafetySheets from "./pages/SafetySheets";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import Users from "./pages/Users";
 
 const queryClient = new QueryClient();
 
@@ -37,7 +38,8 @@ const App = () => {
                         <main className="flex-1 p-6">
                           <Routes>
                             <Route path="/" element={<Dashboard />} />
-                            <Route path="/safety-sheets" element={<SafetySheets />} />
+            <Route path="/safety-sheets" element={<SafetySheets />} />
+            <Route path="/users" element={<Users />} />
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </main>
