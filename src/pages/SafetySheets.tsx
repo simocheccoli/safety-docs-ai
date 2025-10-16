@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Download, Eye, Trash2, Archive, X, Calendar } from "lucide-react";
+import { Plus, Download, Eye, Trash2, Archive, X, Calendar, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NewElaborationDialog } from "@/components/NewElaborationDialog";
@@ -48,9 +48,11 @@ import {
 import { fetchElaborations, deleteElaboration, downloadExcel, downloadZip } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
+type SortField = 'title' | 'status' | 'begin_process';
+type SortDirection = 'asc' | 'desc' | null;
+
 export default function SafetySheets() {
-  const [elaborations, setElaborations] = useState<Elaboration[]>([]);
-  const [totalElaborations, setTotalElaborations] = useState(0);
+  const [allElaborations, setAllElaborations] = useState<Elaboration[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -65,17 +67,18 @@ export default function SafetySheets() {
   const [dateToFilter, setDateToFilter] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [elaborationToDelete, setElaborationToDelete] = useState<number | null>(null);
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   useEffect(() => {
     loadElaborations();
-  }, [currentPage]);
+  }, []);
 
   const loadElaborations = async () => {
     setLoading(true);
     try {
-      const result = await fetchElaborations(currentPage, perPage);
-      setElaborations(result.data);
-      setTotalElaborations(result.total);
+      const result = await fetchElaborations();
+      setAllElaborations(result);
     } catch (error) {
       toast({
         title: "Errore",
@@ -89,7 +92,7 @@ export default function SafetySheets() {
 
   const handleNewElaboration = (name: string, files: File[]) => {
     const newElaboration: Elaboration = {
-      id: Math.max(...elaborations.map(e => e.id), 0) + 1,
+      id: Math.max(...allElaborations.map(e => e.id), 0) + 1,
       title: name,
       status: "elaborating",
       begin_process: new Date().toISOString(),
@@ -98,8 +101,9 @@ export default function SafetySheets() {
       updated_at: new Date().toISOString(),
       deleted_at: null,
     };
-    setElaborations([newElaboration, ...elaborations]);
+    setAllElaborations([newElaboration, ...allElaborations]);
     setDialogOpen(false);
+    setCurrentPage(1);
   };
 
   const handleViewDetails = (elaboration: Elaboration) => {
@@ -187,7 +191,36 @@ export default function SafetySheets() {
     );
   };
 
-  const filteredElaborations = elaborations.filter((elab) => {
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortDirection(null);
+        setSortField(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 text-muted-foreground/50" />;
+    }
+    if (sortDirection === 'asc') {
+      return <ArrowUp className="h-4 w-4 ml-1 text-primary" />;
+    }
+    return <ArrowDown className="h-4 w-4 ml-1 text-primary" />;
+  };
+
+  // Applicazione filtri, ordinamento e paginazione lato frontend
+  let processedElaborations = [...allElaborations];
+
+  // Filtri
+  processedElaborations = processedElaborations.filter((elab) => {
     const matchesSearch = elab.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || elab.status === statusFilter;
     
@@ -210,16 +243,44 @@ export default function SafetySheets() {
     return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
   });
 
+  // Ordinamento
+  if (sortField && sortDirection) {
+    processedElaborations.sort((a, b) => {
+      let aVal: any = a[sortField];
+      let bVal: any = b[sortField];
+
+      if (sortField === 'begin_process') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      } else if (sortField === 'title' || sortField === 'status') {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  const totalFiltered = processedElaborations.length;
+  const totalPages = Math.ceil(totalFiltered / perPage);
+
+  // Paginazione
+  const startIndex = (currentPage - 1) * perPage;
+  const paginatedElaborations = processedElaborations.slice(startIndex, startIndex + perPage);
+
   const clearFilters = () => {
     setSearchQuery("");
     setStatusFilter("all");
     setDateFromFilter("");
     setDateToFilter("");
+    setSortField(null);
+    setSortDirection(null);
+    setCurrentPage(1);
   };
 
-  const hasActiveFilters = searchQuery || statusFilter !== "all" || dateFromFilter || dateToFilter;
-
-  const totalPages = Math.ceil(totalElaborations / perPage);
+  const hasActiveFilters = searchQuery || statusFilter !== "all" || dateFromFilter || dateToFilter || sortField !== null;
 
   const renderPaginationItems = () => {
     const items = [];
@@ -391,21 +452,57 @@ export default function SafetySheets() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">
-              <TableHead className="font-medium text-foreground">Titolo</TableHead>
-              <TableHead className="font-medium text-foreground">Stato</TableHead>
-              <TableHead className="font-medium text-foreground">Data Inizio</TableHead>
+              <TableHead className="font-medium text-foreground">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleSort('title')}
+                  className="h-auto p-0 hover:bg-transparent font-medium"
+                >
+                  Titolo
+                  {getSortIcon('title')}
+                </Button>
+              </TableHead>
+              <TableHead className="font-medium text-foreground">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleSort('status')}
+                  className="h-auto p-0 hover:bg-transparent font-medium"
+                >
+                  Stato
+                  {getSortIcon('status')}
+                </Button>
+              </TableHead>
+              <TableHead className="font-medium text-foreground">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleSort('begin_process')}
+                  className="h-auto p-0 hover:bg-transparent font-medium"
+                >
+                  Data Inizio
+                  {getSortIcon('begin_process')}
+                </Button>
+              </TableHead>
               <TableHead className="text-right font-medium text-foreground">Azioni</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredElaborations.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                  Caricamento...
+                </TableCell>
+              </TableRow>
+            ) : paginatedElaborations.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
                   Nessuna elaborazione trovata
                 </TableCell>
               </TableRow>
             ) : (
-              filteredElaborations.map((elaboration) => (
+              paginatedElaborations.map((elaboration) => (
                 <TableRow key={elaboration.id} className="hover:bg-muted/20">
                   <TableCell className="font-medium">{elaboration.title}</TableCell>
                   <TableCell>{getStatusBadge(elaboration.status)}</TableCell>

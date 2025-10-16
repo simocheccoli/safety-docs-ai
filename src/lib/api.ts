@@ -16,34 +16,21 @@ const MOCK_ELABORATIONS: Elaboration[] = Array.from({ length: 50 }, (_, i) => ({
 
 let useMockData = false;
 
-export async function fetchElaborations(page: number = 1, perPage: number = 10): Promise<{ data: Elaboration[], total: number }> {
+export async function fetchElaborations(): Promise<Elaboration[]> {
   if (useMockData) {
-    const start = (page - 1) * perPage;
-    const end = start + perPage;
-    return {
-      data: MOCK_ELABORATIONS.slice(start, end),
-      total: MOCK_ELABORATIONS.length
-    };
+    return MOCK_ELABORATIONS;
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/rischi?page=${page}&per_page=${perPage}`);
+    const response = await fetch(`${API_BASE_URL}/api/rischi`);
     if (!response.ok) throw new Error('API not available');
     
     const result = await response.json();
-    return {
-      data: result.data,
-      total: result.count || result.data.length
-    };
+    return result.data;
   } catch (error) {
     console.warn('API not available, using mock data');
     useMockData = true;
-    const start = (page - 1) * perPage;
-    const end = start + perPage;
-    return {
-      data: MOCK_ELABORATIONS.slice(start, end),
-      total: MOCK_ELABORATIONS.length
-    };
+    return MOCK_ELABORATIONS;
   }
 }
 

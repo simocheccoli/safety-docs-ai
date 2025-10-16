@@ -69,9 +69,9 @@ export function AppSidebar() {
         <Separator className="my-4" />
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground px-3 mb-2">
-            <FlaskConical className="h-3.5 w-3.5 mr-2 inline" />
-            Rischio Chimico
+          <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground px-3 mb-2 flex items-center gap-2">
+            <FlaskConical className="h-3.5 w-3.5" />
+            <span>Rischio Chimico</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
