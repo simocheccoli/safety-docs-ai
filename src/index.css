@@ -8,53 +8,53 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 166 50% 15%;
+    --background: 0 0% 98%;
+    --foreground: 210 15% 20%;
 
     --card: 0 0% 100%;
-    --card-foreground: 166 50% 15%;
+    --card-foreground: 210 15% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 166 50% 15%;
+    --popover-foreground: 210 15% 20%;
 
-    --primary: 166 68% 35%;
+    --primary: 166 60% 28%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 166 20% 90%;
-    --secondary-foreground: 166 50% 15%;
+    --secondary: 210 10% 93%;
+    --secondary-foreground: 210 15% 20%;
 
-    --muted: 166 10% 95%;
-    --muted-foreground: 166 10% 40%;
+    --muted: 210 10% 96%;
+    --muted-foreground: 210 10% 45%;
 
-    --accent: 166 68% 45%;
+    --accent: 166 60% 28%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 75% 55%;
+    --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 166 15% 88%;
-    --input: 166 15% 88%;
-    --ring: 166 68% 35%;
+    --border: 210 12% 90%;
+    --input: 210 12% 90%;
+    --ring: 166 60% 28%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
     
-    --success: 142 76% 36%;
+    --success: 142 70% 35%;
     --success-foreground: 0 0% 100%;
     
-    --warning: 38 92% 50%;
+    --warning: 38 90% 52%;
     --warning-foreground: 0 0% 100%;
     
-    --info: 199 89% 48%;
+    --info: 199 85% 48%;
     --info-foreground: 0 0% 100%;
 
-    --sidebar-background: 166 70% 25%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 166 68% 35%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 210 15% 20%;
+    --sidebar-primary: 166 60% 28%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 166 68% 30%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 166 60% 20%;
-    --sidebar-ring: 166 68% 45%;
+    --sidebar-accent: 210 10% 96%;
+    --sidebar-accent-foreground: 166 60% 28%;
+    --sidebar-border: 210 12% 90%;
+    --sidebar-ring: 166 60% 28%;
   }
 
   .dark {

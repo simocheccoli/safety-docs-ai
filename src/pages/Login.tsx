@@ -6,37 +6,40 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Fake login - just navigate to dashboard
+    // Mock login - accetta qualsiasi credenziale
     navigate("/");
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <h1 className="font-display text-4xl font-bold text-primary mb-2">HSEB5</h1>
-          <CardTitle>Accedi al Sistema</CardTitle>
-          <CardDescription>
-            Inserisci le tue credenziali per accedere
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-muted/30 to-background p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="space-y-3 text-center pb-6">
+          <div className="space-y-2">
+            <CardTitle className="text-3xl font-semibold tracking-tight">HSEB5</CardTitle>
+            <p className="text-sm text-muted-foreground">Health · Safety · Environment</p>
+          </div>
+          <CardDescription className="text-base">
+            Accedi al sistema di gestione rischio chimico
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="nome@azienda.it"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="Inserisci username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
+                className="h-11"
               />
             </div>
             <div className="space-y-2">
@@ -44,12 +47,14 @@ export default function Login() {
               <Input
                 id="password"
                 type="password"
+                placeholder="Inserisci password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="h-11"
               />
             </div>
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full h-11 mt-6">
               Accedi
             </Button>
           </form>

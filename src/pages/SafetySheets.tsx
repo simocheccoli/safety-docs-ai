@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Download, Eye, Trash2, Archive, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,46 +21,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { fetchElaborations, deleteElaboration, downloadExcel, downloadZip } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 export default function SafetySheets() {
-  const [elaborations, setElaborations] = useState<Elaboration[]>([
-    {
-      id: 1,
-      title: "Analisi Laboratorio Q1 2024",
-      status: "completed",
-      begin_process: "2024-01-15T10:00:00Z",
-      end_process: "2024-01-15T10:45:00Z",
-      created_at: "2024-01-15T09:55:00Z",
-      updated_at: "2024-01-15T10:45:00Z",
-      deleted_at: null,
-    },
-    {
-      id: 2,
-      title: "Schede Chimici Reparto A",
-      status: "elaborating",
-      begin_process: "2024-03-10T14:20:00Z",
-      end_process: null,
-      created_at: "2024-03-10T14:15:00Z",
-      updated_at: "2024-03-10T14:20:00Z",
-      deleted_at: null,
-    },
-    {
-      id: 3,
-      title: "Verifica Sostanze Pericolose",
-      status: "error",
-      begin_process: "2024-02-20T09:10:00Z",
-      end_process: "2024-02-20T09:25:00Z",
-      created_at: "2024-02-20T09:05:00Z",
-      updated_at: "2024-02-20T09:25:00Z",
-      deleted_at: null,
-    },
-  ]);
+  const [elaborations, setElaborations] = useState<Elaboration[]>([]);
+  const [totalElaborations, setTotalElaborations] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const perPage = 10;
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedElaboration, setSelectedElaboration] = useState<Elaboration | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  useEffect(() => {
+    loadElaborations();
+  }, [currentPage]);
+
+  const loadElaborations = async () => {
+    setLoading(true);
+    try {
+      const result = await fetchElaborations(currentPage, perPage);
+      setElaborations(result.data);
+      setTotalElaborations(result.total);
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare le elaborazioni",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleNewElaboration = (name: string, files: File[]) => {
     const newElaboration: Elaboration = {
@@ -82,8 +88,37 @@ export default function SafetySheets() {
     setDetailsDialogOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    setElaborations(elaborations.filter(e => e.id !== id));
+  const handleDelete = async (id: number) => {
+    try {
+      await deleteElaboration(id);
+      toast({
+        title: "Successo",
+        description: "Elaborazione eliminata con successo",
+      });
+      loadElaborations();
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare l'elaborazione",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadExcel = (id: number) => {
+    downloadExcel(id);
+    toast({
+      title: "Download avviato",
+      description: "Il file Excel verrà scaricato a breve",
+    });
+  };
+
+  const handleDownloadZip = (id: number) => {
+    downloadZip(id);
+    toast({
+      title: "Download avviato",
+      description: "Il file ZIP verrà scaricato a breve",
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -112,12 +147,91 @@ export default function SafetySheets() {
     return matchesSearch && matchesStatus;
   });
 
+  const totalPages = Math.ceil(totalElaborations / perPage);
+
+  const renderPaginationItems = () => {
+    const items = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink
+              onClick={() => setCurrentPage(i)}
+              isActive={currentPage === i}
+              className="cursor-pointer"
+            >
+              {i}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+    } else {
+      items.push(
+        <PaginationItem key={1}>
+          <PaginationLink
+            onClick={() => setCurrentPage(1)}
+            isActive={currentPage === 1}
+            className="cursor-pointer"
+          >
+            1
+          </PaginationLink>
+        </PaginationItem>
+      );
+
+      if (currentPage > 3) {
+        items.push(<PaginationEllipsis key="ellipsis-1" />);
+      }
+
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+
+      for (let i = start; i <= end; i++) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink
+              onClick={() => setCurrentPage(i)}
+              isActive={currentPage === i}
+              className="cursor-pointer"
+            >
+              {i}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+
+      if (currentPage < totalPages - 2) {
+        items.push(<PaginationEllipsis key="ellipsis-2" />);
+      }
+
+      items.push(
+        <PaginationItem key={totalPages}>
+          <PaginationLink
+            onClick={() => setCurrentPage(totalPages)}
+            isActive={currentPage === totalPages}
+            className="cursor-pointer"
+          >
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    return items;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl font-bold text-foreground">
-          Elenco Elaborazioni
-        </h1>
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+            Schede di Sicurezza
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Gestione elaborazioni e reportistica
+          </p>
+        </div>
         <Button 
           onClick={() => setDialogOpen(true)} 
           size="lg"
@@ -184,11 +298,12 @@ export default function SafetySheets() {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      {elaboration.status === "completed" && (
+                       {elaboration.status === "completed" && (
                         <>
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handleDownloadExcel(elaboration.id)}
                             title="Scarica Excel"
                           >
                             <Download className="h-4 w-4" />
@@ -196,6 +311,7 @@ export default function SafetySheets() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handleDownloadZip(elaboration.id)}
                             title="Scarica ZIP schede"
                           >
                             <Archive className="h-4 w-4" />
@@ -219,6 +335,30 @@ export default function SafetySheets() {
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              
+              {renderPaginationItems()}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       <NewElaborationDialog
         open={dialogOpen}
