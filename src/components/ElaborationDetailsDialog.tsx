@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FileText, Pencil, Check, X, ExternalLink } from "lucide-react";
+import { FileText, Pencil, Check, X, ExternalLink, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -32,11 +32,13 @@ export function ElaborationDetailsDialog({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
   const [isSavingTitle, setIsSavingTitle] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (open && elaboration) {
       setEditedTitle(elaboration.title);
+      setSelectedFile(null);
       loadDetails();
     }
   }, [open, elaboration]);
@@ -48,6 +50,9 @@ export function ElaborationDetailsDialog({
     try {
       const result = await fetchElaborationDetails(elaboration.id);
       setFiles(result.files);
+      if (result.files.length > 0) {
+        setSelectedFile(result.files[0]);
+      }
     } catch (error) {
       toast({
         title: "Errore",
@@ -87,7 +92,11 @@ export function ElaborationDetailsDialog({
     setIsEditingTitle(false);
   };
 
-  const handleFilePreview = (filename: string) => {
+  const handleFileClick = (filename: string) => {
+    setSelectedFile(filename);
+  };
+
+  const handleDownload = (filename: string) => {
     if (!elaboration) return;
     const url = getFileUrl(elaboration.id, filename);
     window.open(url, '_blank');
@@ -97,7 +106,7 @@ export function ElaborationDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-[95vw] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <div className="flex items-center gap-2">
             {isEditingTitle ? (
@@ -149,37 +158,58 @@ export function ElaborationDetailsDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-2 overflow-y-auto flex-1 pr-2">
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-sm text-muted-foreground">Caricamento...</div>
-            </div>
-          ) : files.length === 0 ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-sm text-muted-foreground">Nessun file disponibile</div>
-            </div>
-          ) : (
-            files.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors group"
-              >
-                <FileText className="h-5 w-5 text-primary flex-shrink-0" />
-                <span className="flex-1 text-sm break-all">{file}</span>
-                <Badge variant="outline" className="text-xs flex-shrink-0">
-                  PDF
-                </Badge>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                  onClick={() => handleFilePreview(file)}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
+        <div className="flex gap-4 overflow-hidden flex-1">
+          <div className="w-80 space-y-2 overflow-y-auto pr-2 flex-shrink-0">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-sm text-muted-foreground">Caricamento...</div>
               </div>
-            ))
-          )}
+            ) : files.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-sm text-muted-foreground">Nessun file disponibile</div>
+              </div>
+            ) : (
+              files.map((file, index) => (
+                <div
+                  key={index}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                    selectedFile === file 
+                      ? 'bg-primary/10 border-primary' 
+                      : 'bg-card hover:bg-accent/5'
+                  }`}
+                  onClick={() => handleFileClick(file)}
+                >
+                  <FileText className="h-5 w-5 text-primary flex-shrink-0" />
+                  <span className="flex-1 text-sm break-all">{file}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="flex-shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(file);
+                    }}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex-1 border rounded-lg overflow-hidden bg-muted/30">
+            {selectedFile && elaboration ? (
+              <iframe
+                src={getFileUrl(elaboration.id, selectedFile)}
+                className="w-full h-full"
+                title={selectedFile}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                Seleziona un file per visualizzare l'anteprima
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
