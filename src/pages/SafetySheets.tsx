@@ -117,6 +117,10 @@ export default function SafetySheets() {
     setDetailsDialogOpen(true);
   };
 
+  const handleTitleUpdate = () => {
+    loadElaborations();
+  };
+
   const handleDeleteClick = (id: number) => {
     setElaborationToDelete(id);
     setDeleteDialogOpen(true);
@@ -628,6 +632,7 @@ export default function SafetySheets() {
         open={detailsDialogOpen}
         onOpenChange={setDetailsDialogOpen}
         elaboration={selectedElaboration}
+        onTitleUpdate={handleTitleUpdate}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

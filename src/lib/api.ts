@@ -74,6 +74,47 @@ export async function fetchElaborationDetails(id: number): Promise<{ elaboration
   }
 }
 
+export async function updateElaborationTitle(id: number, title: string): Promise<void> {
+  if (useMockData) {
+    const elaboration = MOCK_ELABORATIONS.find(e => e.id === id);
+    if (elaboration) {
+      elaboration.title = title;
+    }
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/rischi/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title }),
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) throw new Error('Documento non trovato');
+      throw new Error('API not available');
+    }
+    
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'Errore durante l\'aggiornamento');
+    }
+  } catch (error) {
+    console.warn('API not available for update');
+    useMockData = true;
+    throw error;
+  }
+}
+
+export function getFileUrl(id: number, filename: string): string {
+  if (useMockData) {
+    return '#';
+  }
+  return `${API_BASE_URL}/api/rischi/${id}/files/${encodeURIComponent(filename)}`;
+}
+
 export async function deleteElaboration(id: number): Promise<void> {
   if (useMockData) {
     const index = MOCK_ELABORATIONS.findIndex(e => e.id === id);
