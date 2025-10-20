@@ -112,7 +112,7 @@ export function getFileUrl(id: number, filename: string): string {
   if (useMockData) {
     return '#';
   }
-  return `${API_BASE_URL}/api/rischi/${id}/files/${encodeURIComponent(filename)}`;
+  return `${API_BASE_URL}/api/rischi/${id}/file/${encodeURIComponent(filename)}`;
 }
 
 export async function deleteElaboration(id: number): Promise<void> {
