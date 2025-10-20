@@ -1,36 +1,54 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { RiskTypeList } from "@/components/RiskTypeList";
-import { RiskTypeDialog } from "@/components/RiskTypeDialog";
-import { RiskType } from "@/types/risk";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RiskTable } from "@/components/RiskTable";
+import { RiskType, RiskStatus } from "@/types/risk";
+import { getRiskTypes } from "@/lib/riskStorage";
 
 const RiskManagement = () => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingRisk, setEditingRisk] = useState<RiskType | undefined>();
+  const navigate = useNavigate();
+  const [risks, setRisks] = useState<RiskType[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<RiskStatus | "all">("all");
+
+  useEffect(() => {
+    loadRisks();
+    
+    const handleUpdate = () => loadRisks();
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('riskTypesUpdated', handleUpdate);
+    
+    return () => {
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('riskTypesUpdated', handleUpdate);
+    };
+  }, []);
+
+  const loadRisks = () => {
+    setRisks(getRiskTypes());
+  };
 
   const handleCreate = () => {
-    setEditingRisk(undefined);
-    setIsDialogOpen(true);
+    navigate("/rischi/new");
   };
 
-  const handleEdit = (risk: RiskType) => {
-    setEditingRisk(risk);
-    setIsDialogOpen(true);
-  };
-
-  const handleClose = () => {
-    setIsDialogOpen(false);
-    setEditingRisk(undefined);
-  };
+  const filteredRisks = risks.filter(risk => {
+    const matchesSearch = risk.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         risk.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || risk.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestione Rischi</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Gestione Rischi AI</h1>
           <p className="text-muted-foreground mt-2">
-            Configura i 48 tipi di rischio con AI per l'estrazione automatica dei dati
+            Configura i rischi con AI per l'estrazione automatica dei dati
           </p>
         </div>
         <Button onClick={handleCreate}>
@@ -39,13 +57,28 @@ const RiskManagement = () => {
         </Button>
       </div>
 
-      <RiskTypeList onEdit={handleEdit} />
+      <div className="flex gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Cerca per nome o descrizione..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as RiskStatus | "all")}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Filtra per stato" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti gli stati</SelectItem>
+            <SelectItem value="draft">Bozza</SelectItem>
+            <SelectItem value="validated">Validato</SelectItem>
+            <SelectItem value="active">Attivo</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-      <RiskTypeDialog
-        open={isDialogOpen}
-        onClose={handleClose}
-        editingRisk={editingRisk}
-      />
+      <RiskTable risks={filteredRisks} onRefresh={loadRisks} />
     </div>
   );
 };

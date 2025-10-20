@@ -1,15 +1,28 @@
+export type RiskStatus = 'draft' | 'validated' | 'active';
+
+export interface OutputField {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  description: string;
+  required: boolean;
+  children?: OutputField[];
+}
+
 export interface RiskType {
   id: string;
-  title: string;
-  contextPrompt: string;
-  outputPrompt: string;
-  enabled: boolean;
+  name: string;
+  description: string;
+  status: RiskStatus;
+  inputExpectations: string;
+  outputStructure: OutputField[];
+  aiPrompt: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface RiskTestResult {
   success: boolean;
-  extractedData: any;
+  valid: boolean;
+  output: any;
   error?: string;
 }

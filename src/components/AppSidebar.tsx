@@ -114,7 +114,7 @@ export function AppSidebar() {
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <NavLink 
-                        to="/risk-management"
+                        to="/rischi"
                         className={({ isActive }) => 
                           isActive 
                             ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
