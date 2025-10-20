@@ -1,4 +1,4 @@
-import { Home, FlaskConical, FileText, LogOut, User, Users } from "lucide-react";
+import { Home, FlaskConical, FileText, LogOut, User, Users, Settings } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -111,6 +111,21 @@ export function AppSidebar() {
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to="/risk-management"
+                        className={({ isActive }) => 
+                          isActive 
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        }
+                      >
+                        <Settings className="h-4 w-4" />
+                        <span>Gestione Rischi</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <NavLink 

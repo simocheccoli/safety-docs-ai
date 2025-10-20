@@ -10,6 +10,7 @@ import SafetySheets from "./pages/SafetySheets";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Users from "./pages/Users";
+import RiskManagement from "./pages/RiskManagement";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => {
                           <Routes>
                             <Route path="/" element={<Dashboard />} />
             <Route path="/safety-sheets" element={<SafetySheets />} />
+            <Route path="/risk-management" element={<RiskManagement />} />
             <Route path="/users" element={<Users />} />
                             <Route path="*" element={<NotFound />} />
                           </Routes>
