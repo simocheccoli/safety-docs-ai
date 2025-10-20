@@ -1,6 +1,6 @@
 import { Elaboration } from "@/types/elaboration";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8056";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://213.171.186.160:8000";
 
 // Mock data for fallback
 const MOCK_ELABORATIONS: Elaboration[] = Array.from({ length: 50 }, (_, i) => ({
