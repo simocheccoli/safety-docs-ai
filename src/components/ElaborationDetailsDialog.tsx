@@ -33,13 +33,22 @@ export function ElaborationDetailsDialog({
   const [editedTitle, setEditedTitle] = useState("");
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (open && elaboration) {
       setEditedTitle(elaboration.title);
       setSelectedFile(null);
+      setPdfUrl(null);
       loadDetails();
+    } else {
+      // Cleanup URL when dialog closes
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+        setPdfUrl(null);
+      }
     }
   }, [open, elaboration]);
 
@@ -92,8 +101,40 @@ export function ElaborationDetailsDialog({
     setIsEditingTitle(false);
   };
 
-  const handleFileClick = (filename: string) => {
+  const handleFileClick = async (filename: string) => {
+    if (!elaboration) return;
+    
     setSelectedFile(filename);
+    setLoadingPdf(true);
+    
+    // Cleanup previous URL
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl);
+    }
+    
+    try {
+      const url = getFileUrl(elaboration.id, filename);
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error('File non disponibile');
+      }
+      
+      const blob = await response.blob();
+      // Force PDF mime type for proper viewing
+      const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+      const objectUrl = URL.createObjectURL(pdfBlob);
+      setPdfUrl(objectUrl);
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare il file",
+        variant: "destructive",
+      });
+      setPdfUrl(null);
+    } finally {
+      setLoadingPdf(false);
+    }
   };
 
   const handleDownload = (filename: string) => {
@@ -198,11 +239,15 @@ export function ElaborationDetailsDialog({
           </div>
 
           <div className="flex-1 border rounded-lg overflow-hidden bg-muted/30">
-            {selectedFile && elaboration ? (
+            {loadingPdf ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <div className="text-sm">Caricamento PDF...</div>
+              </div>
+            ) : pdfUrl ? (
               <iframe
-                src={`${getFileUrl(elaboration.id, selectedFile)}#toolbar=0`}
+                src={pdfUrl}
                 className="w-full h-full"
-                title={selectedFile}
+                title={selectedFile || 'PDF Preview'}
                 style={{ minHeight: '600px' }}
               />
             ) : (
