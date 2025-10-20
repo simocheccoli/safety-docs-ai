@@ -26,7 +26,10 @@ export async function fetchElaborations(): Promise<Elaboration[]> {
     if (!response.ok) throw new Error('API not available');
     
     const result = await response.json();
-    return result.data;
+    if (result.success) {
+      return result.data;
+    }
+    throw new Error('API response not successful');
   } catch (error) {
     console.warn('API not available, using mock data');
     useMockData = true;
@@ -46,13 +49,19 @@ export async function fetchElaborationDetails(id: number): Promise<{ elaboration
 
   try {
     const response = await fetch(`${API_BASE_URL}/api/rischi/${id}`);
-    if (!response.ok) throw new Error('API not available');
+    if (!response.ok) {
+      if (response.status === 404) throw new Error('Documento non trovato');
+      throw new Error('API not available');
+    }
     
     const result = await response.json();
-    return {
-      elaboration: result.document,
-      files: result.files
-    };
+    if (result.success) {
+      return {
+        elaboration: result.document,
+        files: result.files
+      };
+    }
+    throw new Error('API response not successful');
   } catch (error) {
     console.warn('API not available, using mock data');
     useMockData = true;
@@ -78,7 +87,16 @@ export async function deleteElaboration(id: number): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/api/rischi/${id}`, {
       method: 'DELETE'
     });
-    if (!response.ok) throw new Error('API not available');
+    
+    if (!response.ok) {
+      if (response.status === 404) throw new Error('Documento non trovato');
+      throw new Error('API not available');
+    }
+    
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'Errore durante l\'eliminazione');
+    }
   } catch (error) {
     console.warn('API not available, using mock data');
     useMockData = true;
@@ -94,7 +112,7 @@ export function downloadExcel(id: number): void {
     console.log(`Mock: Downloading Excel for elaboration ${id}`);
     return;
   }
-  window.open(`${API_BASE_URL}/api/rischi/${id}/download-excel`, '_blank');
+  window.open(`${API_BASE_URL}/api/rischi/${id}/excel`, '_blank');
 }
 
 export function downloadZip(id: number): void {
@@ -102,7 +120,7 @@ export function downloadZip(id: number): void {
     console.log(`Mock: Downloading ZIP for elaboration ${id}`);
     return;
   }
-  window.open(`${API_BASE_URL}/api/rischi/${id}/download-zip`, '_blank');
+  window.open(`${API_BASE_URL}/api/rischi/${id}/pdf`, '_blank');
 }
 
 export async function createElaboration(name: string, files: File[]): Promise<void> {
@@ -114,7 +132,7 @@ export async function createElaboration(name: string, files: File[]): Promise<vo
   const formData = new FormData();
   formData.append('title', name);
   files.forEach((file) => {
-    formData.append('files', file);
+    formData.append('files[]', file);
   });
 
   try {
@@ -122,7 +140,16 @@ export async function createElaboration(name: string, files: File[]): Promise<vo
       method: 'POST',
       body: formData,
     });
-    if (!response.ok) throw new Error('API not available');
+    
+    if (!response.ok) {
+      if (response.status === 422) throw new Error('Errore di validazione');
+      throw new Error('API not available');
+    }
+    
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'Errore nel caricamento dei file');
+    }
   } catch (error) {
     console.warn('API not available for upload');
     useMockData = true;
