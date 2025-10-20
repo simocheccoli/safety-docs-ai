@@ -200,9 +200,10 @@ export function ElaborationDetailsDialog({
           <div className="flex-1 border rounded-lg overflow-hidden bg-muted/30">
             {selectedFile && elaboration ? (
               <iframe
-                src={getFileUrl(elaboration.id, selectedFile)}
+                src={`${getFileUrl(elaboration.id, selectedFile)}#toolbar=0`}
                 className="w-full h-full"
                 title={selectedFile}
+                style={{ minHeight: '600px' }}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
