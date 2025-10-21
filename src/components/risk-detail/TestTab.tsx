@@ -9,6 +9,9 @@ import { toast } from "@/hooks/use-toast";
 import OpenAI from "openai";
 import * as pdfjsLib from 'pdfjs-dist';
 
+const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
+
+
 interface TestTabProps {
   riskId?: string;
   inputExpectations: string;
@@ -18,7 +21,7 @@ interface TestTabProps {
 
 export function TestTab({ riskId, inputExpectations, outputStructure, aiPrompt }: TestTabProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [apiKey, setApiKey] = useState<string>("");
+  const [apiKey, setApiKey] = useState<string>(OPENAI_API_KEY);
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
