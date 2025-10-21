@@ -10,6 +10,7 @@ import { FileWithClassification, ElaborationStatus } from "@/types/dvr";
 import { getRiskTypeById } from "@/lib/riskStorage";
 import { toast } from "@/hooks/use-toast";
 import OpenAI from "openai";
+import { extractText } from "unpdf";
 
 interface FileProcessingStepProps {
   files: FileWithClassification[];
@@ -26,6 +27,21 @@ export function FileProcessingStep({ files, apiKey, setApiKey, onComplete, onBac
   const [progress, setProgress] = useState(0);
 
   const readFileContent = async (file: File): Promise<string> => {
+    // Handle PDF files
+    if (file.name.toLowerCase().endsWith('.pdf')) {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await extractText(new Uint8Array(arrayBuffer));
+        // extractText returns an object with text property that can be string or array
+        const text = Array.isArray(result.text) ? result.text.join('\n') : result.text;
+        return text;
+      } catch (error) {
+        console.error('Error extracting PDF text:', error);
+        throw new Error('Impossibile estrarre il testo dal PDF');
+      }
+    }
+    
+    // Handle text files
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {

@@ -56,7 +56,7 @@ export function FileUploadStep({ onFilesSelected }: FileUploadStepProps) {
           <input
             type="file"
             onChange={handleFileChange}
-            accept=".txt,.md,.json"
+            accept=".txt,.md,.json,.pdf"
             multiple
             className="hidden"
             id="file-upload"
