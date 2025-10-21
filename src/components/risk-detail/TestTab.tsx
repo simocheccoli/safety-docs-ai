@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import OpenAI from "openai";
+import * as pdfjsLib from 'pdfjs-dist';
 
 interface TestTabProps {
   riskId?: string;
@@ -21,6 +22,9 @@ export function TestTab({ riskId, inputExpectations, outputStructure, aiPrompt }
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Configura il worker di PDF.js
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -113,15 +117,46 @@ export function TestTab({ riskId, inputExpectations, outputStructure, aiPrompt }
   };
 
   const readFileContent = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        resolve(content);
-      };
-      reader.onerror = () => reject(new Error("Errore nella lettura del file"));
-      reader.readAsText(file);
-    });
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+
+    if (fileExtension === 'pdf') {
+      return await extractTextFromPDF(file);
+    } else {
+      // File di testo normale
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target?.result as string;
+          resolve(content);
+        };
+        reader.onerror = () => reject(new Error("Errore nella lettura del file"));
+        reader.readAsText(file);
+      });
+    }
+  };
+
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      
+      let fullText = '';
+      
+      // Estrai il testo da ogni pagina
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        
+        fullText += `\n--- Pagina ${pageNum} ---\n${pageText}\n`;
+      }
+      
+      return fullText;
+    } catch (err) {
+      throw new Error(`Errore nell'estrazione del testo dal PDF: ${err}`);
+    }
   };
 
   const generateOutputSchema = (fields: any[]): any => {
@@ -194,7 +229,7 @@ export function TestTab({ riskId, inputExpectations, outputStructure, aiPrompt }
             <input
               type="file"
               onChange={handleFileChange}
-              accept=".txt,.md,.json"
+              accept=".txt,.md,.json,.pdf"
               className="hidden"
               id="file-upload"
             />
@@ -204,7 +239,7 @@ export function TestTab({ riskId, inputExpectations, outputStructure, aiPrompt }
                 {file ? file.name : "Clicca per caricare o trascina un file qui"}
               </p>
               <p className="text-xs text-muted-foreground mt-2">
-                File di testo (TXT, MD, JSON), max 20MB
+                File di testo o PDF, max 20MB
               </p>
             </label>
           </div>
