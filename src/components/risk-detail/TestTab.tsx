@@ -3,16 +3,21 @@ import { Upload, Play, CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import OpenAI from "openai";
 
 interface TestTabProps {
   riskId?: string;
   inputExpectations: string;
   outputStructure: any[];
+  aiPrompt: string;
 }
 
-export function TestTab({ riskId, inputExpectations, outputStructure }: TestTabProps) {
+export function TestTab({ riskId, inputExpectations, outputStructure, aiPrompt }: TestTabProps) {
   const [file, setFile] = useState<File | null>(null);
+  const [apiKey, setApiKey] = useState<string>("");
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,31 +40,124 @@ export function TestTab({ riskId, inputExpectations, outputStructure }: TestTabP
       return;
     }
 
+    if (!apiKey) {
+      toast({
+        title: "Errore",
+        description: "Inserisci la tua API Key di OpenAI",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setTesting(true);
     setError(null);
 
-    // Simulazione chiamata API
-    setTimeout(() => {
-      const mockResult = {
-        success: true,
-        valid: true,
-        output: {
-          hazard_description: "Esposizione a 90 dB(A)",
-          exposure_level: "alto",
-          affected_roles: ["operatore macchina", "manutentore"],
-          mitigation_measures: ["tappi auricolari", "schermatura acustica"],
-          residual_risk: "medio"
-        }
-      };
+    try {
+      // Leggi il contenuto del file
+      const fileContent = await readFileContent(file);
 
-      setResult(mockResult);
-      setTesting(false);
-      
+      // Inizializza OpenAI client
+      const openai = new OpenAI({
+        apiKey: apiKey,
+        dangerouslyAllowBrowser: true
+      });
+
+      // Genera lo schema per l'output strutturato
+      const outputSchema = generateOutputSchema(outputStructure);
+
+      // Chiamata a OpenAI
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: aiPrompt
+          },
+          {
+            role: "user",
+            content: `Analizza il seguente documento e estrai le informazioni richieste:\n\n${fileContent}`
+          }
+        ],
+        response_format: {
+          type: "json_object"
+        }
+      });
+
+      const responseContent = completion.choices[0].message.content;
+      const parsedOutput = JSON.parse(responseContent || "{}");
+
+      // Valida l'output rispetto alla struttura attesa
+      const isValid = validateOutput(parsedOutput, outputStructure);
+
+      setResult({
+        success: true,
+        valid: isValid,
+        output: parsedOutput
+      });
+
       toast({
         title: "Test completato",
         description: "L'elaborazione AI è stata eseguita con successo",
       });
-    }, 2000);
+    } catch (err: any) {
+      const errorMessage = err.message || "Errore durante l'elaborazione";
+      setError(errorMessage);
+      toast({
+        title: "Errore",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const readFileContent = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        resolve(content);
+      };
+      reader.onerror = () => reject(new Error("Errore nella lettura del file"));
+      reader.readAsText(file);
+    });
+  };
+
+  const generateOutputSchema = (fields: any[]): any => {
+    const schema: any = {
+      type: "object",
+      properties: {},
+      required: []
+    };
+
+    fields.forEach(field => {
+      schema.properties[field.name] = {
+        type: field.type === "array" ? "array" : field.type,
+        description: field.description
+      };
+
+      if (field.required) {
+        schema.required.push(field.name);
+      }
+
+      if (field.type === "array" && field.children) {
+        schema.properties[field.name].items = {
+          type: "string"
+        };
+      }
+    });
+
+    return schema;
+  };
+
+  const validateOutput = (output: any, structure: any[]): boolean => {
+    for (const field of structure) {
+      if (field.required && !(field.name in output)) {
+        return false;
+      }
+    }
+    return true;
   };
 
   return (
@@ -74,15 +172,29 @@ export function TestTab({ riskId, inputExpectations, outputStructure }: TestTabP
         <CardContent className="space-y-6">
           <Alert>
             <AlertDescription>
-              Carica un documento PDF o DOCX per verificare che l'AI riesca ad estrarre correttamente i dati secondo la struttura definita.
+              Carica un documento di testo per verificare che l'AI riesca ad estrarre correttamente i dati secondo la struttura definita.
             </AlertDescription>
           </Alert>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="api-key">OpenAI API Key</Label>
+              <Input
+                id="api-key"
+                type="password"
+                placeholder="sk-..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+          </div>
 
           <div className="border-2 border-dashed rounded-lg p-8 text-center">
             <input
               type="file"
               onChange={handleFileChange}
-              accept=".pdf,.docx,.doc"
+              accept=".txt,.md,.json"
               className="hidden"
               id="file-upload"
             />
@@ -92,12 +204,12 @@ export function TestTab({ riskId, inputExpectations, outputStructure }: TestTabP
                 {file ? file.name : "Clicca per caricare o trascina un file qui"}
               </p>
               <p className="text-xs text-muted-foreground mt-2">
-                PDF o DOCX, max 20MB
+                File di testo (TXT, MD, JSON), max 20MB
               </p>
             </label>
           </div>
 
-          <Button onClick={handleTest} disabled={!file || testing} className="w-full">
+          <Button onClick={handleTest} disabled={!file || !apiKey || testing} className="w-full">
             <Play className="h-4 w-4 mr-2" />
             {testing ? "Elaborazione in corso..." : "Esegui Test AI"}
           </Button>

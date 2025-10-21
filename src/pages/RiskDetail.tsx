@@ -151,6 +151,7 @@ const RiskDetail = () => {
             riskId={id === "new" ? undefined : id}
             inputExpectations={inputExpectations}
             outputStructure={outputStructure}
+            aiPrompt={aiPrompt}
           />
         </TabsContent>
       </Tabs>
