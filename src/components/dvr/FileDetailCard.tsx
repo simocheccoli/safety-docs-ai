@@ -1,16 +1,18 @@
 import { useState } from "react";
-import { CheckCircle2, XCircle, AlertTriangle, Edit, Save, Eye } from "lucide-react";
+import { CheckCircle2, XCircle, AlertTriangle, Edit, Save, Eye, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { updateDVRFile } from "@/lib/dvrStorage";
 import { FileMetadata } from "@/types/dvr";
 import { toast } from "@/hooks/use-toast";
+import { VisualJSONEditor } from "./VisualJSONEditor";
 
 interface FileDetailCardProps {
   file: FileMetadata;
@@ -18,35 +20,45 @@ interface FileDetailCardProps {
 }
 
 export function FileDetailCard({ file, onUpdate }: FileDetailCardProps) {
-  const [isEditing, setIsEditing] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editedOutput, setEditedOutput] = useState(
-    JSON.stringify(file.output_json_modificato || file.output_json_completo, null, 2)
+    file.output_json_modificato || file.output_json_completo
   );
   const [notes, setNotes] = useState(file.note_rspp || "");
   const [included, setIncluded] = useState(file.inclusione_dvr);
 
   const handleSave = () => {
-    try {
-      const parsedOutput = JSON.parse(editedOutput);
-      updateDVRFile(file.file_id, {
-        output_json_modificato: parsedOutput,
-        modificato_manualmente: true,
-        note_rspp: notes,
-        inclusione_dvr: included
-      });
-      setIsEditing(false);
-      onUpdate();
-      toast({
-        title: "Modifiche Salvate",
-        description: "I dati del file sono stati aggiornati",
-      });
-    } catch (e) {
-      toast({
-        title: "Errore",
-        description: "Il JSON inserito non è valido",
-        variant: "destructive"
-      });
-    }
+    updateDVRFile(file.file_id, {
+      output_json_modificato: editedOutput,
+      modificato_manualmente: true,
+      note_rspp: notes,
+      inclusione_dvr: included
+    });
+    setIsDialogOpen(false);
+    onUpdate();
+    toast({
+      title: "Modifiche Salvate",
+      description: "I dati del file sono stati aggiornati",
+    });
+  };
+
+  const handleInclusionChange = (checked: boolean) => {
+    setIncluded(checked);
+    updateDVRFile(file.file_id, {
+      inclusione_dvr: checked
+    });
+    onUpdate();
+  };
+
+  const handleNotesChange = () => {
+    updateDVRFile(file.file_id, {
+      note_rspp: notes
+    });
+    onUpdate();
+    toast({
+      title: "Note Salvate",
+      description: "Le note RSPP sono state aggiornate",
+    });
   };
 
   const getStatusIcon = () => {
@@ -91,107 +103,153 @@ export function FileDetailCard({ file, onUpdate }: FileDetailCardProps) {
                   {file.stato_elaborazione_ai}
                 </span>
                 {file.modificato_manualmente && (
-                  <Badge variant="secondary">Modificato</Badge>
+                  <Badge variant="secondary">Modificato Manualmente</Badge>
                 )}
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Dialog>
+          <div className="flex items-center gap-3">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Eye className="h-4 w-4 mr-2" />
-                  Anteprima
+                <Button variant="default" size="sm">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Modifica Dati
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+              <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
                 <DialogHeader>
-                  <DialogTitle>{file.nome_file}</DialogTitle>
+                  <DialogTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    {file.nome_file}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Confronta il file originale con i dati estratti e modifica la struttura come necessario
+                  </DialogDescription>
                 </DialogHeader>
-                <Tabs defaultValue="extracted" className="w-full">
-                  <TabsList>
-                    <TabsTrigger value="extracted">Dati Estratti</TabsTrigger>
-                    {file.file_content && (
-                      <TabsTrigger value="original">File Originale</TabsTrigger>
-                    )}
-                  </TabsList>
-                  <TabsContent value="extracted" className="space-y-4">
-                    <div>
-                      <Label>Output AI {file.modificato_manualmente && "(Modificato)"}</Label>
-                      <pre className="bg-muted p-4 rounded-lg overflow-auto text-xs mt-2">
-                        {JSON.stringify(displayOutput, null, 2)}
-                      </pre>
+                
+                <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
+                  {/* File Originale */}
+                  <div className="flex flex-col h-full border rounded-lg">
+                    <div className="p-3 border-b bg-muted">
+                      <h3 className="font-semibold text-sm">File Originale</h3>
                     </div>
-                    <div>
-                      <Label>Motivazione Stato</Label>
-                      <p className="text-sm mt-2">{file.motivazione_stato}</p>
-                    </div>
-                  </TabsContent>
-                  {file.file_content && (
-                    <TabsContent value="original">
-                      <div className="bg-muted p-4 rounded-lg">
-                        <pre className="whitespace-pre-wrap text-sm">{file.file_content}</pre>
+                    <ScrollArea className="flex-1 p-4">
+                      {file.file_content ? (
+                        <pre className="whitespace-pre-wrap text-xs font-mono">
+                          {file.file_content}
+                        </pre>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          <p>Contenuto non disponibile</p>
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </div>
+
+                  {/* Editor Visuale JSON */}
+                  <div className="flex flex-col h-full border rounded-lg">
+                    <div className="p-3 border-b bg-muted">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-sm">Dati Estratti</h3>
+                        {file.modificato_manualmente && (
+                          <Badge variant="secondary">Modificato</Badge>
+                        )}
                       </div>
-                    </TabsContent>
-                  )}
-                </Tabs>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Modifica, aggiungi o rimuovi campi dalla struttura
+                      </p>
+                    </div>
+                    <ScrollArea className="flex-1 p-4">
+                      <VisualJSONEditor
+                        data={editedOutput}
+                        onChange={setEditedOutput}
+                      />
+                    </ScrollArea>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div className="text-sm text-muted-foreground">
+                    <span className={getStatusColor()}>
+                      {file.motivazione_stato}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      Annulla
+                    </Button>
+                    <Button onClick={handleSave}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Salva Modifiche
+                    </Button>
+                  </div>
+                </div>
               </DialogContent>
             </Dialog>
-            <Switch
-              checked={included}
-              onCheckedChange={setIncluded}
-              id={`include-${file.file_id}`}
-            />
-            <Label htmlFor={`include-${file.file_id}`} className="cursor-pointer">
-              Includi
-            </Label>
+            
+            <div className="flex items-center gap-2 border-l pl-3">
+              <Switch
+                checked={included}
+                onCheckedChange={handleInclusionChange}
+                id={`include-${file.file_id}`}
+              />
+              <Label htmlFor={`include-${file.file_id}`} className="cursor-pointer text-sm">
+                Includi
+              </Label>
+            </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {isEditing ? (
-          <>
-            <div>
-              <Label>Modifica Output JSON</Label>
-              <Textarea
-                value={editedOutput}
-                onChange={(e) => setEditedOutput(e.target.value)}
-                rows={10}
-                className="font-mono text-xs mt-2"
-              />
-            </div>
-            <div>
-              <Label>Note RSPP</Label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                className="mt-2"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleSave}>
-                <Save className="h-4 w-4 mr-2" />
-                Salva Modifiche
-              </Button>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
-                Annulla
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            {file.note_rspp && (
-              <div>
-                <Label>Note RSPP</Label>
-                <p className="text-sm mt-1">{file.note_rspp}</p>
-              </div>
-            )}
-            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Modifica Dati Estratti
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <Label className="text-xs text-muted-foreground">Rischio</Label>
+            <p className="font-medium">{file.rischio_nome}</p>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Dimensione</Label>
+            <p className="font-medium">{(file.file_size / 1024).toFixed(2)} KB</p>
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor={`notes-${file.file_id}`} className="text-sm">Note RSPP</Label>
+          <div className="flex gap-2 mt-2">
+            <Textarea
+              id={`notes-${file.file_id}`}
+              placeholder="Aggiungi note o osservazioni..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="flex-1"
+            />
+            <Button size="sm" variant="outline" onClick={handleNotesChange}>
+              Salva
             </Button>
-          </>
+          </div>
+        </div>
+
+        {Object.keys(displayOutput).length > 0 && (
+          <div>
+            <Label className="text-sm mb-2 block">Riepilogo Dati</Label>
+            <div className="bg-muted p-3 rounded-lg">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {Object.entries(displayOutput).slice(0, 4).map(([key, value]) => (
+                  <div key={key} className="flex flex-col">
+                    <span className="text-muted-foreground">{key}:</span>
+                    <span className="font-medium truncate">
+                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {Object.keys(displayOutput).length > 4 && (
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  +{Object.keys(displayOutput).length - 4} altri campi
+                </p>
+              )}
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>
