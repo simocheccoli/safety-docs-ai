@@ -4,10 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileWithClassification, FileMetadata } from "@/types/dvr";
-import { saveDVRFile } from "@/lib/dvrStorage";
+import { FileWithClassification, FileMetadata, DVR } from "@/types/dvr";
+import { saveDVRFile, saveDVR, getDVRById, updateDVR } from "@/lib/dvrStorage";
 import { toast } from "@/hooks/use-toast";
 import {
   Accordion,
@@ -18,12 +19,16 @@ import {
 
 interface FileReviewStepProps {
   files: FileWithClassification[];
-  onComplete: () => void;
+  existingDvrId?: string;
+  onComplete: (dvrId: string) => void;
   onBack: () => void;
 }
 
-export function FileReviewStep({ files, onComplete, onBack }: FileReviewStepProps) {
+export function FileReviewStep({ files, existingDvrId, onComplete, onBack }: FileReviewStepProps) {
   const [reviewedFiles, setReviewedFiles] = useState<FileWithClassification[]>(files);
+  const [dvrName, setDvrName] = useState<string>(
+    existingDvrId ? getDVRById(existingDvrId)?.nome || "" : `DVR ${new Date().toLocaleDateString('it-IT')}`
+  );
 
   const handleInclusionChange = (fileId: string, included: boolean) => {
     setReviewedFiles(prev => prev.map(f =>
@@ -42,21 +47,55 @@ export function FileReviewStep({ files, onComplete, onBack }: FileReviewStepProp
   };
 
   const handleSaveAndComplete = () => {
-    // Salva tutti i file nel storage
+    if (!dvrName.trim()) {
+      toast({
+        title: "Errore",
+        description: "Inserisci un nome per il DVR",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    let finalDvrId = existingDvrId;
+
+    // Se non esiste un DVR, creane uno nuovo
+    if (!existingDvrId) {
+      const newDvr: DVR = {
+        id: crypto.randomUUID(),
+        nome: dvrName,
+        numero_revisione: 1,
+        data_creazione: new Date().toISOString(),
+        data_ultima_modifica: new Date().toISOString(),
+        stato: 'BOZZA',
+        created_by: 'current_user',
+        updated_by: 'current_user'
+      };
+      saveDVR(newDvr);
+      finalDvrId = newDvr.id;
+    } else {
+      // Aggiorna DVR esistente
+      updateDVR(existingDvrId, {
+        nome: dvrName,
+        updated_by: 'current_user'
+      });
+    }
+
+    // Salva tutti i file associati al DVR
     reviewedFiles.forEach(fileObj => {
       const metadata: FileMetadata = {
         ...fileObj.metadata,
+        dvr_id: finalDvrId!,
         updated_at: new Date().toISOString()
       } as FileMetadata;
       saveDVRFile(metadata);
     });
 
     toast({
-      title: "DVR Salvato",
+      title: existingDvrId ? "File Aggiunti" : "DVR Creato",
       description: `${reviewedFiles.length} documenti sono stati salvati con successo`,
     });
 
-    onComplete();
+    onComplete(finalDvrId!);
   };
 
   const getStatusIcon = (status?: string) => {
@@ -99,10 +138,21 @@ export function FileReviewStep({ files, onComplete, onBack }: FileReviewStepProp
       <CardContent className="space-y-6">
         <Alert>
           <AlertDescription>
-            Rivedi i risultati dell'elaborazione AI e decidi quali documenti includere nel DVR finale.
-            Puoi aggiungere note per ogni documento.
+            <strong>Attenzione:</strong> Verifica attentamente i dati estratti prima di finalizzare.
+            Le decisioni prese qui hanno valore legale per la valutazione dei rischi.
           </AlertDescription>
         </Alert>
+
+        <div>
+          <Label htmlFor="dvr-name">Nome DVR</Label>
+          <Input
+            id="dvr-name"
+            value={dvrName}
+            onChange={(e) => setDvrName(e.target.value)}
+            placeholder="Inserisci nome DVR..."
+            className="mt-2"
+          />
+        </div>
 
         <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
           <div className="text-center">

@@ -10,7 +10,6 @@ import { FileWithClassification, ElaborationStatus } from "@/types/dvr";
 import { getRiskTypeById } from "@/lib/riskStorage";
 import { toast } from "@/hooks/use-toast";
 import OpenAI from "openai";
-import * as pdfjsLib from 'pdfjs-dist';
 
 interface FileProcessingStepProps {
   files: FileWithClassification[];
@@ -26,42 +25,16 @@ export function FileProcessingStep({ files, apiKey, setApiKey, onComplete, onBac
   const [currentFileIndex, setCurrentFileIndex] = useState<number>(-1);
   const [progress, setProgress] = useState(0);
 
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-
   const readFileContent = async (file: File): Promise<string> => {
-    const fileExtension = file.name.split('.').pop()?.toLowerCase();
-
-    if (fileExtension === 'pdf') {
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        
-        let fullText = '';
-        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-          const page = await pdf.getPage(pageNum);
-          const textContent = await page.getTextContent();
-          const pageText = textContent.items
-            .map((item: any) => item.str)
-            .join(' ');
-          
-          fullText += `\n--- Pagina ${pageNum} ---\n${pageText}\n`;
-        }
-        
-        return fullText;
-      } catch (err) {
-        throw new Error(`Errore nell'estrazione del testo dal PDF: ${err}`);
-      }
-    } else {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const content = e.target?.result as string;
-          resolve(content);
-        };
-        reader.onerror = () => reject(new Error("Errore nella lettura del file"));
-        reader.readAsText(file);
-      });
-    }
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        resolve(content);
+      };
+      reader.onerror = () => reject(new Error("Errore nella lettura del file"));
+      reader.readAsText(file);
+    });
   };
 
   const analyzeWithAI = async (fileContent: string, prompt: string): Promise<any> => {
@@ -150,7 +123,13 @@ export function FileProcessingStep({ files, apiKey, setApiKey, onComplete, onBac
         }
 
         // Leggi contenuto file
-        const fileContent = await readFileContent(fileObj.file);
+        let fileContent: string;
+        try {
+          fileContent = await readFileContent(fileObj.file);
+        } catch (error) {
+          console.error(`Error reading file ${fileObj.file.name}:`, error);
+          fileContent = `[Contenuto non disponibile per ${fileObj.file.type}]`;
+        }
 
         // Analizza con AI
         const output = await analyzeWithAI(fileContent, risk.aiPrompt);
@@ -161,9 +140,11 @@ export function FileProcessingStep({ files, apiKey, setApiKey, onComplete, onBac
         // Aggiorna metadata
         updatedFiles[i].metadata = {
           ...updatedFiles[i].metadata,
+          file_content: fileContent,
           stato_elaborazione_ai: status,
           motivazione_stato: motivation,
           output_json_completo: output,
+          modificato_manualmente: false,
           updated_at: new Date().toISOString()
         };
 

@@ -13,9 +13,13 @@ type WizardStep = 'upload' | 'classify' | 'process' | 'review';
 
 export default function DVRWizard() {
   const navigate = useNavigate();
+  const searchParams = new URLSearchParams(window.location.search);
+  const existingDvrId = searchParams.get('dvrId');
+  
   const [currentStep, setCurrentStep] = useState<WizardStep>('upload');
   const [files, setFiles] = useState<FileWithClassification[]>([]);
   const [apiKey, setApiKey] = useState<string>("");
+  const [dvrId, setDvrId] = useState<string>(existingDvrId || "");
 
   const steps = [
     { id: 'upload', label: 'Caricamento', icon: Upload },
@@ -54,8 +58,8 @@ export default function DVRWizard() {
     setCurrentStep('review');
   };
 
-  const handleReviewComplete = () => {
-    navigate('/');
+  const handleReviewComplete = (createdDvrId: string) => {
+    navigate(`/dvr/${createdDvrId}`);
   };
 
   return (
@@ -117,6 +121,7 @@ export default function DVRWizard() {
       {currentStep === 'review' && (
         <FileReviewStep 
           files={files}
+          existingDvrId={existingDvrId || undefined}
           onComplete={handleReviewComplete}
           onBack={() => setCurrentStep('process')}
         />
