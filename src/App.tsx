@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import Users from "./pages/Users";
 import RiskManagement from "./pages/RiskManagement";
 import RiskDetail from "./pages/RiskDetail";
+import DVRWizard from "./pages/DVRWizard";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => {
             <Route path="/safety-sheets" element={<SafetySheets />} />
               <Route path="/rischi" element={<RiskManagement />} />
               <Route path="/rischi/:id" element={<RiskDetail />} />
+              <Route path="/dvr" element={<DVRWizard />} />
             <Route path="/users" element={<Users />} />
                             <Route path="*" element={<NotFound />} />
                           </Routes>
