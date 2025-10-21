@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import OpenAI from "openai";
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
 interface TestTabProps {
   riskId?: string;
@@ -24,7 +25,7 @@ export function TestTab({ riskId, inputExpectations, outputStructure, aiPrompt }
   const [error, setError] = useState<string | null>(null);
 
   // Configura il worker di PDF.js
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
