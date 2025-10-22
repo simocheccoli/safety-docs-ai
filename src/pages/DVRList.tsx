@@ -18,6 +18,7 @@ import {
 import { getDVRList, deleteDVR, getDVRFiles } from "@/lib/dvrStorage";
 import { DVR } from "@/types/dvr";
 import { toast } from "@/hooks/use-toast";
+import { statusLabels, statusColors } from "@/components/dvr/DVRInfoEditor";
 
 export default function DVRList() {
   const navigate = useNavigate();
@@ -85,13 +86,13 @@ export default function DVRList() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <CardTitle>{dvr.nome}</CardTitle>
-                      <Badge variant={dvr.stato === 'FINALIZZATO' ? 'default' : 'secondary'}>
-                        {dvr.stato}
+                      <Badge className={statusColors[dvr.stato]}>
+                        {statusLabels[dvr.stato]}
                       </Badge>
                       <Badge variant="outline">Rev. {dvr.numero_revisione}</Badge>
                     </div>
                     <CardDescription>
-                      {getIncludedFileCount(dvr.id)} file inclusi su {getFileCount(dvr.id)} totali
+                      {dvr.descrizione || `${getIncludedFileCount(dvr.id)} file inclusi su ${getFileCount(dvr.id)} totali`}
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
