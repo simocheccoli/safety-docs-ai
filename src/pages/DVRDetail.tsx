@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getDVRById, updateDVR, getDVRFiles, createNewRevision, getDVRRevisions } from "@/lib/dvrStorage";
+import { getDVRRevisions, createNewRevision } from "@/lib/dvrStorage";
 import { DVR, DVRRevisione } from "@/types/dvr";
 import { toast } from "@/hooks/use-toast";
 import { FileDetailCard } from "@/components/dvr/FileDetailCard";
+import { DVRInfoEditor, statusLabels, statusColors } from "@/components/dvr/DVRInfoEditor";
+import { dvrApi } from "@/lib/dvrApi";
 
 export default function DVRDetail() {
   const { id } = useParams<{ id: string }>();
@@ -28,24 +30,45 @@ export default function DVRDetail() {
     }
   }, [id]);
 
-  const loadDVR = () => {
+  const loadDVR = async () => {
     if (!id) return;
-    const dvrData = getDVRById(id);
-    if (dvrData) {
-      setDvr(dvrData);
-      setFiles(getDVRFiles(id));
-      setRevisions(getDVRRevisions(id));
+    try {
+      const [dvrData, filesData, revisionsData] = await Promise.all([
+        dvrApi.getDVR(id),
+        dvrApi.getDVRFiles(id),
+        Promise.resolve(getDVRRevisions(id))
+      ]);
+      
+      if (dvrData) {
+        setDvr(dvrData);
+        setFiles(filesData);
+        setRevisions(revisionsData);
+      }
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare i dati del DVR",
+        variant: "destructive"
+      });
     }
   };
 
-  const handleFinalize = () => {
+  const handleFinalize = async () => {
     if (!id) return;
-    updateDVR(id, { stato: 'FINALIZZATO', updated_by: 'current_user' });
-    loadDVR();
-    toast({
-      title: "DVR Finalizzato",
-      description: "Il documento è stato finalizzato con successo",
-    });
+    try {
+      await dvrApi.changeStatus(id, 'FINALIZZATO');
+      loadDVR();
+      toast({
+        title: "DVR Finalizzato",
+        description: "Il documento è stato finalizzato con successo",
+      });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: error instanceof Error ? error.message : "Impossibile finalizzare il DVR",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleCreateRevision = () => {
@@ -89,17 +112,23 @@ export default function DVRDetail() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold">{dvr.nome}</h1>
-              <Badge variant={dvr.stato === 'FINALIZZATO' ? 'default' : 'secondary'}>
-                {dvr.stato}
+              <Badge className={statusColors[dvr.stato]}>
+                {statusLabels[dvr.stato]}
               </Badge>
               <Badge variant="outline">Revisione {dvr.numero_revisione}</Badge>
             </div>
-            <p className="text-muted-foreground">
+            {dvr.descrizione && (
+              <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+                {dvr.descrizione}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
               Ultima modifica: {new Date(dvr.data_ultima_modifica).toLocaleString('it-IT')}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
+          <DVRInfoEditor dvr={dvr} onUpdate={loadDVR} />
           <Button variant="outline" onClick={handleAddFiles}>
             <Plus className="h-4 w-4 mr-2" />
             Aggiungi File
@@ -108,7 +137,7 @@ export default function DVRDetail() {
             <FileEdit className="h-4 w-4 mr-2" />
             Modifica Documento
           </Button>
-          {dvr.stato === 'BOZZA' && (
+          {dvr.stato !== 'FINALIZZATO' && dvr.stato !== 'ARCHIVIATO' && (
             <Button onClick={handleFinalize}>
               <FileCheck className="h-4 w-4 mr-2" />
               Finalizza DVR
