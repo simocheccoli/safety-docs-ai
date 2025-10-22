@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import OpenAI from "openai";
-import * as pdfjsLib from 'pdfjs-dist';
+import { extractText } from "unpdf";
 
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
 
@@ -25,9 +25,6 @@ export function TestTab({ riskId, inputExpectations, outputStructure, aiPrompt }
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Configura il worker di PDF.js
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -141,22 +138,10 @@ export function TestTab({ riskId, inputExpectations, outputStructure, aiPrompt }
   const extractTextFromPDF = async (file: File): Promise<string> => {
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      
-      let fullText = '';
-      
-      // Estrai il testo da ogni pagina
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ');
-        
-        fullText += `\n--- Pagina ${pageNum} ---\n${pageText}\n`;
-      }
-      
-      return fullText;
+      const result = await extractText(new Uint8Array(arrayBuffer));
+      // extractText returns an object with text property that can be string or array
+      const text = Array.isArray(result.text) ? result.text.join('\n') : result.text;
+      return text;
     } catch (err) {
       throw new Error(`Errore nell'estrazione del testo dal PDF: ${err}`);
     }
