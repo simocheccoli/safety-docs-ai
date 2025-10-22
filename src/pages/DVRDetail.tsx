@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Save, FileCheck, AlertTriangle, History } from "lucide-react";
+import { ArrowLeft, Plus, Save, FileCheck, AlertTriangle, History, FileEdit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -103,6 +103,10 @@ export default function DVRDetail() {
           <Button variant="outline" onClick={handleAddFiles}>
             <Plus className="h-4 w-4 mr-2" />
             Aggiungi File
+          </Button>
+          <Button variant="outline" onClick={() => navigate(`/dvr/${id}/document`)}>
+            <FileEdit className="h-4 w-4 mr-2" />
+            Modifica Documento
           </Button>
           {dvr.stato === 'BOZZA' && (
             <Button onClick={handleFinalize}>

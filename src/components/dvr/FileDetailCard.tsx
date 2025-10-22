@@ -116,8 +116,8 @@ export function FileDetailCard({ file, onUpdate }: FileDetailCardProps) {
                   Modifica Dati
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
-                <DialogHeader>
+              <DialogContent className="max-w-[95vw] h-[90vh] flex flex-col">
+                <DialogHeader className="flex-shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
                     {file.nome_file}
@@ -127,28 +127,30 @@ export function FileDetailCard({ file, onUpdate }: FileDetailCardProps) {
                   </DialogDescription>
                 </DialogHeader>
                 
-                <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
+                <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
                   {/* File Originale */}
-                  <div className="flex flex-col h-full border rounded-lg">
-                    <div className="p-3 border-b bg-muted">
+                  <div className="flex flex-col border rounded-lg overflow-hidden">
+                    <div className="p-3 border-b bg-muted flex-shrink-0">
                       <h3 className="font-semibold text-sm">File Originale</h3>
                     </div>
-                    <ScrollArea className="flex-1 p-4">
-                      {file.file_content ? (
-                        <pre className="whitespace-pre-wrap text-xs font-mono">
-                          {file.file_content}
-                        </pre>
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground">
-                          <p>Contenuto non disponibile</p>
-                        </div>
-                      )}
+                    <ScrollArea className="flex-1">
+                      <div className="p-4">
+                        {file.file_content ? (
+                          <pre className="whitespace-pre-wrap text-xs font-mono">
+                            {file.file_content}
+                          </pre>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-muted-foreground">
+                            <p>Contenuto non disponibile</p>
+                          </div>
+                        )}
+                      </div>
                     </ScrollArea>
                   </div>
 
                   {/* Editor Visuale JSON */}
-                  <div className="flex flex-col h-full border rounded-lg">
-                    <div className="p-3 border-b bg-muted">
+                  <div className="flex flex-col border rounded-lg overflow-hidden">
+                    <div className="p-3 border-b bg-muted flex-shrink-0">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-sm">Dati Estratti</h3>
                         {file.modificato_manualmente && (
@@ -159,11 +161,13 @@ export function FileDetailCard({ file, onUpdate }: FileDetailCardProps) {
                         Modifica, aggiungi o rimuovi campi dalla struttura
                       </p>
                     </div>
-                    <ScrollArea className="flex-1 p-4">
-                      <VisualJSONEditor
-                        data={editedOutput}
-                        onChange={setEditedOutput}
-                      />
+                    <ScrollArea className="flex-1">
+                      <div className="p-4">
+                        <VisualJSONEditor
+                          data={editedOutput}
+                          onChange={setEditedOutput}
+                        />
+                      </div>
                     </ScrollArea>
                   </div>
                 </div>
