@@ -1,6 +1,19 @@
-import { useEffect, useRef } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Undo,
+  Redo,
+  Heading1,
+  Heading2,
+} from 'lucide-react';
 
 interface DocumentEditorProps {
   content: string;
@@ -8,47 +21,140 @@ interface DocumentEditorProps {
 }
 
 export function DocumentEditor({ content, onChange }: DocumentEditorProps) {
-  const quillRef = useRef<ReactQuill>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
-  const modules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-      [{ 'font': [] }],
-      [{ 'size': ['small', false, 'large', 'huge'] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'script': 'sub'}, { 'script': 'super' }],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'indent': '-1'}, { 'indent': '+1' }],
-      [{ 'align': [] }],
-      ['blockquote', 'code-block'],
-      ['link', 'image'],
-      ['clean']
-    ],
+  const execCommand = (command: string, value?: string) => {
+    document.execCommand(command, false, value);
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
   };
 
-  const formats = [
-    'header', 'font', 'size',
-    'bold', 'italic', 'underline', 'strike',
-    'color', 'background',
-    'script',
-    'list', 'bullet', 'indent',
-    'align',
-    'blockquote', 'code-block',
-    'link', 'image'
-  ];
+  const handleInput = () => {
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col border rounded-lg overflow-hidden">
-      <ReactQuill
-        ref={quillRef}
-        theme="snow"
-        value={content}
-        onChange={onChange}
-        modules={modules}
-        formats={formats}
-        className="flex-1 flex flex-col"
-        style={{ height: '100%' }}
+      <div className="flex flex-wrap gap-1 p-2 border-b bg-muted/30">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand('formatBlock', '<h1>')}
+          title="Titolo 1"
+        >
+          <Heading1 className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand('formatBlock', '<h2>')}
+          title="Titolo 2"
+        >
+          <Heading2 className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand('bold')}
+          title="Grassetto"
+        >
+          <Bold className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand('italic')}
+          title="Corsivo"
+        >
+          <Italic className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand('underline')}
+          title="Sottolineato"
+        >
+          <Underline className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand('insertUnorderedList')}
+          title="Elenco puntato"
+        >
+          <List className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand('insertOrderedList')}
+          title="Elenco numerato"
+        >
+          <ListOrdered className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand('justifyLeft')}
+          title="Allinea a sinistra"
+        >
+          <AlignLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand('justifyCenter')}
+          title="Allinea al centro"
+        >
+          <AlignCenter className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand('justifyRight')}
+          title="Allinea a destra"
+        >
+          <AlignRight className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand('undo')}
+          title="Annulla"
+        >
+          <Undo className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => execCommand('redo')}
+          title="Ripeti"
+        >
+          <Redo className="h-4 w-4" />
+        </Button>
+      </div>
+      <div
+        ref={editorRef}
+        contentEditable
+        className="flex-1 p-4 overflow-auto focus:outline-none prose prose-sm max-w-none bg-card text-card-foreground"
+        dangerouslySetInnerHTML={{ __html: content }}
+        onInput={handleInput}
+        suppressContentEditableWarning
       />
     </div>
   );
