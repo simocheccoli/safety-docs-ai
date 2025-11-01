@@ -67,6 +67,32 @@ export default function DVRDetail() {
     }
   };
 
+  const handleSave = async () => {
+    if (!id || !dvr) return;
+    
+    try {
+      setIsSaving(true);
+      await dvrApi.updateDVR(id, {
+        data_ultima_modifica: new Date().toISOString()
+      });
+      
+      toast({
+        title: "Salvato",
+        description: "Le modifiche sono state salvate con successo",
+      });
+      
+      loadDVR();
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: error instanceof Error ? error.message : "Impossibile salvare le modifiche",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleSaveRevision = async (revisionNote: string) => {
     if (!id || !dvr) return;
     
@@ -141,6 +167,13 @@ export default function DVRDetail() {
           </Button>
           <Button 
             variant="outline" 
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Salva
+          </Button>
+          <Button 
             onClick={() => setShowRevisionDialog(true)}
             disabled={isSaving}
           >

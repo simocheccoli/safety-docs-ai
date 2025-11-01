@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, XCircle, AlertTriangle, Edit, Save, Eye, FileText } from "lucide-react";
+import { CheckCircle2, XCircle, AlertTriangle, Edit, Save, Eye, FileText, FileSearch } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -21,6 +21,7 @@ interface FileDetailCardProps {
 
 export function FileDetailCard({ file, onUpdate }: FileDetailCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [editedOutput, setEditedOutput] = useState(
     file.output_json_modificato || file.output_json_completo
   );
@@ -109,6 +110,37 @@ export function FileDetailCard({ file, onUpdate }: FileDetailCardProps) {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <FileSearch className="h-4 w-4 mr-2" />
+                  Anteprima
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl h-[80vh]">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Anteprima File - {file.nome_file}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Contenuto originale del file caricato
+                  </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="flex-1 mt-4">
+                  {file.file_content ? (
+                    <pre className="whitespace-pre-wrap text-sm font-mono p-4 bg-muted rounded-lg">
+                      {file.file_content}
+                    </pre>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      <p>Contenuto del file non disponibile</p>
+                    </div>
+                  )}
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
+
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="default" size="sm">
