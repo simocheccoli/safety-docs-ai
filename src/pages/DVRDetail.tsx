@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Save, FileCheck, AlertTriangle, FileEdit } from "lucide-react";
+import { ArrowLeft, Plus, Save, FileCheck, AlertTriangle, FileEdit, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -165,21 +166,25 @@ export default function DVRDetail() {
             <FileEdit className="h-4 w-4 mr-2" />
             Modifica Documento
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Salva
-          </Button>
-          <Button 
-            onClick={() => setShowRevisionDialog(true)}
-            disabled={isSaving}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Salva Revisione
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button disabled={isSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                Salva
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleSave}>
+                <Save className="h-4 w-4 mr-2" />
+                Salva
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowRevisionDialog(true)}>
+                <Save className="h-4 w-4 mr-2" />
+                Salva Revisione
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {dvr.stato !== 'FINALIZZATO' && dvr.stato !== 'ARCHIVIATO' && (
             <Button onClick={handleFinalize}>
               <FileCheck className="h-4 w-4 mr-2" />
