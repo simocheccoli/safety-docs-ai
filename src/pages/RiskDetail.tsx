@@ -10,6 +10,7 @@ import { InputExpectationsTab } from "@/components/risk-detail/InputExpectations
 import { OutputStructureTab } from "@/components/risk-detail/OutputStructureTab";
 import { PromptTab } from "@/components/risk-detail/PromptTab";
 import { TestTab } from "@/components/risk-detail/TestTab";
+import { VersionHistory } from "@/components/risk-detail/VersionHistory";
 import { toast } from "@/hooks/use-toast";
 import { generateAIPrompt } from "@/lib/promptGenerator";
 
@@ -139,12 +140,13 @@ const RiskDetail = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="general">Informazioni</TabsTrigger>
           <TabsTrigger value="input">Cosa troverà l'AI</TabsTrigger>
           <TabsTrigger value="output">Struttura Output</TabsTrigger>
           <TabsTrigger value="prompt">Prompt AI</TabsTrigger>
           <TabsTrigger value="test">Test Live</TabsTrigger>
+          <TabsTrigger value="versions">Versioni</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -186,6 +188,20 @@ const RiskDetail = () => {
             outputStructure={outputStructure}
             aiPrompt={aiPrompt}
           />
+        </TabsContent>
+
+        <TabsContent value="versions">
+          {id && id !== "new" ? (
+            <VersionHistory
+              riskId={id}
+              currentVersion={currentVersion}
+              onVersionRestored={loadRisk}
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Salva il rischio per vedere lo storico delle versioni
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

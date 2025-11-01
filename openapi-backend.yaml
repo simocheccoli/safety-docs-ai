@@ -1026,3 +1026,103 @@ paths:
         required: true
         schema:
           type: integer
+  '/api/risks/{risk_id}/versions':
+    get:
+      summary: "Lista delle versioni di un rischio\n\nRestituisce tutte le versioni storiche della configurazione del rischio."
+      operationId: listaDelleVersioniDiUnRischioRestituisceTutteLeVersioniStoricheDellaConfigurazioneDelRischio
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "[\n  {\n    \"id\": 5,\n    \"risk_id\": 3,\n    \"version\": 1,\n    \"name\": \"Vecchio nome\",\n    \"description\": null,\n    \"content_expectations\": null,\n    \"output_structure\": [],\n    \"prompt\": null,\n    \"state\": \"draft\",\n    \"created_at\": \"2025-11-01T15:00:00Z\",\n    \"updated_at\": \"2025-11-01T15:00:00Z\"\n  },\n  …\n]"
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'No query results for model [App\Models\Risk] 999'
+                properties:
+                  message:
+                    type: string
+                    example: 'No query results for model [App\Models\Risk] 999'
+      tags:
+        - Rischi
+      security: []
+    parameters:
+      -
+        in: path
+        name: risk_id
+        description: 'The ID of the risk.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: id
+        description: 'ID del rischio.'
+        example: 3
+        required: true
+        schema:
+          type: integer
+  '/api/risks/{risk_id}/revert/{version}':
+    post:
+      summary: "Torna a una versione precedente\n\nPermette di ripristinare una configurazione di rischio a una versione storica specificata.\nAl ripristino viene automaticamente salvata la configurazione corrente come nuova versione."
+      operationId: tornaAUnaVersionePrecedentePermetteDiRipristinareUnaConfigurazioneDiRischioAUnaVersioneStoricaSpecificataAlRipristinoVieneAutomaticamenteSalvataLaConfigurazioneCorrenteComeNuovaVersione
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "{\n  \"id\": 3,\n  \"uuid\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"name\": \"Vecchio nome\",\n  \"description\": null,\n  …\n  \"version\": 4\n}"
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Version not found'
+                properties:
+                  message:
+                    type: string
+                    example: 'Version not found'
+      tags:
+        - Rischi
+      security: []
+    parameters:
+      -
+        in: path
+        name: risk_id
+        description: 'The ID of the risk.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: version
+        description: 'Numero di versione a cui tornare.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: id
+        description: 'ID del rischio.'
+        example: 3
+        required: true
+        schema:
+          type: integer

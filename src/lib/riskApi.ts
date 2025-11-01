@@ -1,4 +1,4 @@
-import { RiskType, OutputField } from '@/types/risk';
+import { RiskType, OutputField, RiskVersion } from '@/types/risk';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -160,6 +160,38 @@ export const deleteRiskType = async (id: string): Promise<void> => {
     }
   } catch (error) {
     console.error('Error deleting risk:', error);
+    throw error;
+  }
+};
+
+export const getRiskVersions = async (riskId: string): Promise<RiskVersion[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/risks/${riskId}/versions`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch risk versions');
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching risk versions:', error);
+    throw error;
+  }
+};
+
+export const revertRiskToVersion = async (riskId: string, version: number): Promise<RiskType> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/risks/${riskId}/revert/${version}`, {
+      method: 'POST',
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to revert risk to version');
+    }
+    
+    const data = await response.json();
+    return mapBackendRiskToFrontend(data);
+  } catch (error) {
+    console.error('Error reverting risk to version:', error);
     throw error;
   }
 };
