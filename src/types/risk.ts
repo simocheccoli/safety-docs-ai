@@ -10,12 +10,14 @@ export interface OutputField {
 
 export interface RiskType {
   id: string;
+  uuid?: string;
   name: string;
   description: string;
   status: RiskStatus;
   inputExpectations: string;
   outputStructure: OutputField[];
   aiPrompt: string;
+  version: number;
   createdAt: string;
   updatedAt: string;
 }

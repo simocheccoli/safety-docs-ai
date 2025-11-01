@@ -4,7 +4,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RiskType, RiskStatus } from "@/types/risk";
-import { getRiskTypeById, saveRiskType } from "@/lib/riskStorage";
+import { getRiskTypeById, saveRiskType } from "@/lib/riskApi";
 import { GeneralInfoTab } from "@/components/risk-detail/GeneralInfoTab";
 import { InputExpectationsTab } from "@/components/risk-detail/InputExpectationsTab";
 import { OutputStructureTab } from "@/components/risk-detail/OutputStructureTab";
@@ -18,6 +18,8 @@ const RiskDetail = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "general");
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState(1);
   
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -28,7 +30,16 @@ const RiskDetail = () => {
 
   useEffect(() => {
     if (id && id !== "new") {
-      const risk = getRiskTypeById(id);
+      loadRisk();
+    }
+  }, [id]);
+
+  const loadRisk = async () => {
+    if (!id || id === "new") return;
+    
+    try {
+      setIsLoading(true);
+      const risk = await getRiskTypeById(id);
       if (risk) {
         setName(risk.name);
         setDescription(risk.description);
@@ -36,11 +47,20 @@ const RiskDetail = () => {
         setInputExpectations(risk.inputExpectations);
         setOutputStructure(risk.outputStructure);
         setAiPrompt(risk.aiPrompt);
+        setCurrentVersion(risk.version);
       }
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare il rischio",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-  }, [id]);
+  };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       toast({
         title: "Errore",
@@ -50,27 +70,40 @@ const RiskDetail = () => {
       return;
     }
 
-    const risk: RiskType = {
-      id: id === "new" ? Date.now().toString() : id!,
-      name,
-      description,
-      status,
-      inputExpectations,
-      outputStructure,
-      aiPrompt,
-      createdAt: id === "new" ? new Date().toISOString() : getRiskTypeById(id!)?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      setIsLoading(true);
+      
+      const risk: RiskType = {
+        id: id === "new" ? "new" : id!,
+        name,
+        description,
+        status,
+        inputExpectations,
+        outputStructure,
+        aiPrompt,
+        version: currentVersion,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-    saveRiskType(risk);
-    window.dispatchEvent(new Event('riskTypesUpdated'));
-    
-    toast({
-      title: "Rischio salvato",
-      description: "Le modifiche sono state salvate con successo.",
-    });
+      await saveRiskType(risk);
+      window.dispatchEvent(new Event('riskTypesUpdated'));
+      
+      toast({
+        title: "Rischio salvato",
+        description: "Le modifiche sono state salvate con successo.",
+      });
 
-    navigate("/rischi");
+      navigate("/rischi");
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile salvare il rischio",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRegeneratePrompt = () => {
@@ -99,9 +132,9 @@ const RiskDetail = () => {
             </p>
           </div>
         </div>
-        <Button onClick={handleSave}>
+        <Button onClick={handleSave} disabled={isLoading}>
           <Save className="h-4 w-4 mr-2" />
-          Salva
+          {isLoading ? "Salvataggio..." : "Salva"}
         </Button>
       </div>
 
