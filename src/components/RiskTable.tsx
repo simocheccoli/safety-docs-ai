@@ -84,6 +84,7 @@ export function RiskTable({ risks, onRefresh }: RiskTableProps) {
               <TableHead>Nome Rischio</TableHead>
               <TableHead>Descrizione</TableHead>
               <TableHead>Stato</TableHead>
+              <TableHead>Versione</TableHead>
               <TableHead>Ultima Modifica</TableHead>
               <TableHead className="text-right">Azioni</TableHead>
             </TableRow>
@@ -97,6 +98,9 @@ export function RiskTable({ risks, onRefresh }: RiskTableProps) {
                   <Badge variant="outline" className={statusConfig[risk.status].className}>
                     {statusConfig[risk.status].label}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary">v{risk.version}</Badge>
                 </TableCell>
                 <TableCell>
                   {format(new Date(risk.updatedAt), "dd/MM/yyyy HH:mm", { locale: it })}
