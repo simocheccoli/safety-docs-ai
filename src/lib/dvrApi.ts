@@ -341,7 +341,7 @@ export const dvrApi = {
  */
 function mapDVRFromBackend(backendDVR: any): DVR {
   return {
-    id: backendDVR.uuid || backendDVR.id?.toString(),
+    id: backendDVR.id?.toString(), // Use numeric ID, not UUID
     nome: backendDVR.title,
     descrizione: backendDVR.description || '',
     numero_revisione: backendDVR.revision,
