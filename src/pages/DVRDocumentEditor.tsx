@@ -9,6 +9,7 @@ import { dvrApi } from "@/lib/dvrApi";
 import { DVR } from "@/types/dvr";
 import { toast } from "@/hooks/use-toast";
 import { DocumentEditor } from "@/components/dvr/DocumentEditor";
+import { SuperDoc } from "@harbour-enterprises/superdoc";
 import "@harbour-enterprises/superdoc/style.css";
 
 export default function DVRDocumentEditor() {
@@ -97,16 +98,18 @@ export default function DVRDocumentEditor() {
     
     return () => {
       if (superDocRef.current) {
-        superDocRef.current.destroy();
+        try {
+          superDocRef.current.destroy();
+        } catch (e) {
+          console.log('Cleanup SuperDoc:', e);
+        }
         superDocRef.current = null;
       }
     };
   }, [editorMode]);
 
-  const initializeSuperDoc = async () => {
+  const initializeSuperDoc = () => {
     try {
-      const { SuperDoc } = await import('@harbour-enterprises/superdoc');
-      
       if (superDocContainerRef.current && !superDocRef.current) {
         superDocRef.current = new SuperDoc({
           selector: '#superdoc-container',
