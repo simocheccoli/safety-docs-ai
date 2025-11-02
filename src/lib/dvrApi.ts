@@ -10,10 +10,14 @@ export const dvrApi = {
   /**
    * Crea un nuovo DVR con file
    */
-  createDVR: async (title: string, files: File[], companyId?: number): Promise<DVR> => {
+  createDVR: async (title: string, files: File[], companyId?: number, description?: string): Promise<DVR> => {
     try {
       const formData = new FormData();
       formData.append('title', title);
+      
+      if (description) {
+        formData.append('description', description);
+      }
       
       if (companyId) {
         formData.append('company_id', companyId.toString());
@@ -94,8 +98,12 @@ export const dvrApi = {
         updatePayload.title = data.nome;
       }
       
+      if (data.descrizione !== undefined) {
+        updatePayload.description = data.descrizione;
+      }
+      
       if (data.stato !== undefined) {
-        updatePayload.status = mapStatusToBackend(data.stato);
+        updatePayload.status = data.stato;
       }
       
       if (data.company_id !== undefined) {
@@ -141,7 +149,8 @@ export const dvrApi = {
         body: JSON.stringify({
           note: revisionNote,
           title: data.nome,
-          status: data.stato ? mapStatusToBackend(data.stato) : undefined,
+          description: data.descrizione,
+          status: data.stato,
         }),
       });
       
@@ -362,7 +371,7 @@ function mapDVRFromBackend(backendDVR: any): DVR {
     numero_revisione: backendDVR.revision,
     data_creazione: backendDVR.created_at,
     data_ultima_modifica: backendDVR.updated_at,
-    stato: mapStatusFromBackend(backendDVR.status),
+    stato: backendDVR.status as DVRStatus,
     company_id: backendDVR.company_id,
     company: backendDVR.company ? {
       id: backendDVR.company.id,
@@ -410,38 +419,9 @@ function mapVersionFromBackend(backendVersion: any): DVRVersion {
     version: backendVersion.version,
     nome: backendVersion.title,
     descrizione: backendVersion.description || null,
-    stato: mapStatusFromBackend(backendVersion.status),
+    stato: backendVersion.status as DVRStatus,
     revision_note: backendVersion.revision_note || null,
     created_at: backendVersion.created_at,
     updated_at: backendVersion.updated_at,
   };
-}
-
-/**
- * Mappa gli stati frontend a quelli backend
- */
-function mapStatusToBackend(status?: string): string {
-  const statusMap: Record<string, string> = {
-    'BOZZA': 'draft',
-    'IN_REVISIONE': 'draft',
-    'IN_APPROVAZIONE': 'draft',
-    'APPROVATO': 'draft',
-    'FINALIZZATO': 'completed',
-    'ARCHIVIATO': 'archived'
-  };
-  
-  return status ? statusMap[status] || 'draft' : 'draft';
-}
-
-/**
- * Mappa gli stati backend a quelli frontend
- */
-export function mapStatusFromBackend(status: string): DVRStatus {
-  const statusMap: Record<string, DVRStatus> = {
-    'draft': 'BOZZA',
-    'completed': 'FINALIZZATO',
-    'archived': 'ARCHIVIATO'
-  };
-  
-  return statusMap[status] || 'BOZZA';
 }

@@ -1,5 +1,5 @@
 export type ElaborationStatus = 'IN_ELABORAZIONE' | 'POSITIVO' | 'NEGATIVO' | 'DA_ATTENZIONARE';
-export type DVRStatus = 'BOZZA' | 'IN_REVISIONE' | 'IN_APPROVAZIONE' | 'APPROVATO' | 'FINALIZZATO' | 'ARCHIVIATO';
+export type DVRStatus = 'draft' | 'completed' | 'archived';
 
 export interface DVR {
   id: string;

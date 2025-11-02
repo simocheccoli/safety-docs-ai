@@ -26,15 +26,11 @@ interface DVRVersionHistoryProps {
   onVersionRestored: () => void;
 }
 
-// Helper per mappare lo stato a un'etichetta leggibile
 const mapStatusLabel = (status: DVRStatus): string => {
   const labels: Record<DVRStatus, string> = {
-    'BOZZA': 'Bozza',
-    'IN_REVISIONE': 'In Revisione',
-    'IN_APPROVAZIONE': 'In Approvazione',
-    'APPROVATO': 'Approvato',
-    'FINALIZZATO': 'Finalizzato',
-    'ARCHIVIATO': 'Archiviato'
+    'draft': 'Bozza',
+    'completed': 'Completato',
+    'archived': 'Archiviato'
   };
   return labels[status] || status;
 };
@@ -42,12 +38,9 @@ const mapStatusLabel = (status: DVRStatus): string => {
 // Helper per mappare lo stato a una variante del badge
 const mapStatusVariant = (status: DVRStatus): "default" | "secondary" | "destructive" | "outline" => {
   const variants: Record<DVRStatus, "default" | "secondary" | "destructive" | "outline"> = {
-    'BOZZA': 'outline',
-    'IN_REVISIONE': 'secondary',
-    'IN_APPROVAZIONE': 'default',
-    'APPROVATO': 'default',
-    'FINALIZZATO': 'default',
-    'ARCHIVIATO': 'secondary'
+    'draft': 'outline',
+    'completed': 'default',
+    'archived': 'secondary'
   };
   return variants[status] || 'outline';
 };
