@@ -22,6 +22,7 @@ export default function DVRDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [dvr, setDvr] = useState<DVR | null>(null);
+  const [currentVersion, setCurrentVersion] = useState<any | null>(null);
   const [files, setFiles] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [showRevisionDialog, setShowRevisionDialog] = useState(false);
@@ -37,14 +38,19 @@ export default function DVRDetail() {
   const loadDVR = async () => {
     if (!id) return;
     try {
-      const [dvrData, filesData] = await Promise.all([
+      const [dvrData, filesData, versions] = await Promise.all([
         dvrApi.getDVR(id),
-        dvrApi.getDVRFiles(id)
+        dvrApi.getDVRFiles(id),
+        dvrApi.getDVRVersions(id)
       ]);
       
       if (dvrData) {
         setDvr(dvrData);
         setFiles(filesData);
+        
+        // Trova la versione corrente
+        const currentVer = versions.find(v => v.version === dvrData.numero_revisione);
+        setCurrentVersion(currentVer);
         
         // Carica i dettagli completi dell'azienda se presente
         if (dvrData.company_id) {
@@ -170,7 +176,7 @@ export default function DVRDetail() {
       </div>
 
       {/* Nota revisione - Banner prominente */}
-      {dvr.revision_note && (
+      {currentVersion?.revision_note && (
         <Alert className="border-primary bg-primary/5">
           <FileText className="h-5 w-5 text-primary" />
           <div className="ml-2">
@@ -178,7 +184,7 @@ export default function DVRDetail() {
               Nota Revisione {dvr.numero_revisione}
             </p>
             <AlertDescription className="text-foreground">
-              {dvr.revision_note}
+              {currentVersion.revision_note}
             </AlertDescription>
           </div>
         </Alert>
