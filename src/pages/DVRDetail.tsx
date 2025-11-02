@@ -169,6 +169,21 @@ export default function DVRDetail() {
         </div>
       </div>
 
+      {/* Nota revisione - Banner prominente */}
+      {dvr.revision_note && (
+        <Alert className="border-primary bg-primary/5">
+          <FileText className="h-5 w-5 text-primary" />
+          <div className="ml-2">
+            <p className="font-semibold text-primary mb-1">
+              Nota Revisione {dvr.numero_revisione}
+            </p>
+            <AlertDescription className="text-foreground">
+              {dvr.revision_note}
+            </AlertDescription>
+          </div>
+        </Alert>
+      )}
+
       {/* Info principali e azioni */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Colonna sinistra: Info DVR e Azienda */}
@@ -178,25 +193,6 @@ export default function DVRDetail() {
             <p className="text-sm text-muted-foreground">
               {dvr.descrizione}
             </p>
-          )}
-
-          {/* Nota revisione */}
-          {dvr.revision_note && (
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-start gap-2">
-                  <FileText className="h-4 w-4 mt-0.5 text-primary" />
-                  <div className="flex-1">
-                    <p className="text-xs font-semibold mb-1 text-primary">
-                      Nota Revisione {dvr.numero_revisione}:
-                    </p>
-                    <p className="text-sm">
-                      {dvr.revision_note}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           )}
 
           {/* Azienda */}
