@@ -176,7 +176,7 @@ export default function DVRDetail() {
       </div>
 
       {/* Nota revisione - Banner prominente */}
-      {currentVersion?.note && (
+      {dvr.revision_note && (
         <Alert className="border-primary bg-primary/5">
           <FileText className="h-5 w-5 text-primary" />
           <div className="ml-2">
@@ -184,7 +184,7 @@ export default function DVRDetail() {
               Nota Revisione {dvr.numero_revisione}
             </p>
             <AlertDescription className="text-foreground">
-              {currentVersion.note}
+              {dvr.revision_note}
             </AlertDescription>
           </div>
         </Alert>

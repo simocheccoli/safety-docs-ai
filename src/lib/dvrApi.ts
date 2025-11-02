@@ -450,7 +450,7 @@ function mapVersionFromBackend(backendVersion: any): DVRVersion {
     nome: backendVersion.title,
     descrizione: backendVersion.description || null,
     stato: (backendVersion.status || 'BOZZA') as DVRStatus,
-    revision_note: backendVersion.revision_note || null,
+    revision_note: backendVersion.note || backendVersion.revision_note || null,
     created_at: backendVersion.created_at,
     updated_at: backendVersion.updated_at,
   };
