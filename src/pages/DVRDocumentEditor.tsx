@@ -4,20 +4,32 @@ import { ArrowLeft, Save, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getDVRById } from "@/lib/dvrStorage";
+import { dvrApi } from "@/lib/dvrApi";
+import { DVR } from "@/types/dvr";
 import { toast } from "@/hooks/use-toast";
 import { DocumentEditor } from "@/components/dvr/DocumentEditor";
 
 export default function DVRDocumentEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [dvr, setDvr] = useState<any>(null);
+  const [dvr, setDvr] = useState<DVR | null>(null);
+  const [loading, setLoading] = useState(true);
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentContent, setDocumentContent] = useState("");
 
   useEffect(() => {
     if (id) {
-      const dvrData = getDVRById(id);
+      loadDVR();
+    }
+  }, [id]);
+
+  const loadDVR = async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      const dvrData = await dvrApi.getDVR(id);
+      
       if (dvrData) {
         setDvr(dvrData);
         // Carica il contenuto del documento salvato o inizializza con template
@@ -52,9 +64,26 @@ export default function DVRDocumentEditor() {
             <p>Conclusioni della valutazione...</p>
           `);
         }
+      } else {
+        toast({
+          title: "Errore",
+          description: "DVR non trovato",
+          variant: "destructive",
+        });
+        navigate('/dvr');
       }
+    } catch (error) {
+      console.error("Errore caricamento DVR:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare il DVR",
+        variant: "destructive",
+      });
+      navigate('/dvr');
+    } finally {
+      setLoading(false);
     }
-  }, [id]);
+  };
 
   const handleSave = () => {
     if (!id) return;
@@ -87,7 +116,7 @@ export default function DVRDocumentEditor() {
     });
   };
 
-  if (!dvr) {
+  if (loading || !dvr) {
     return (
       <div className="flex items-center justify-center h-screen">
         <p className="text-muted-foreground">Caricamento...</p>
