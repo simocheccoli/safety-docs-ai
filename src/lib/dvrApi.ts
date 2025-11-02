@@ -1,4 +1,4 @@
-import { DVR, FileMetadata, DVRVersion } from "@/types/dvr";
+import { DVR, FileMetadata, DVRVersion, DVRStatus } from "@/types/dvr";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -29,8 +29,8 @@ export const dvrApi = {
         throw new Error(error.message || "Errore nella creazione del DVR");
       }
       
-      const data = await response.json();
-      return data;
+      const backendData = await response.json();
+      return mapDVRFromBackend(backendData);
     } catch (error) {
       console.error("Errore createDVR:", error);
       throw error;
@@ -49,7 +49,7 @@ export const dvrApi = {
       }
       
       const data = await response.json();
-      return data;
+      return data.map(mapDVRFromBackend);
     } catch (error) {
       console.error("Errore getDVRList:", error);
       throw error;
@@ -71,8 +71,8 @@ export const dvrApi = {
         throw new Error("Errore nel recupero del DVR");
       }
       
-      const data = await response.json();
-      return data;
+      const backendData = await response.json();
+      return mapDVRFromBackend(backendData);
     } catch (error) {
       console.error("Errore getDVR:", error);
       throw error;
@@ -100,8 +100,8 @@ export const dvrApi = {
         throw new Error(error.message || "Errore nell'aggiornamento del DVR");
       }
       
-      const updated = await response.json();
-      return updated;
+      const backendData = await response.json();
+      return mapDVRFromBackend(backendData);
     } catch (error) {
       console.error("Errore updateDVR:", error);
       throw error;
@@ -135,7 +135,6 @@ export const dvrApi = {
         throw new Error(error.message || "Errore nel salvataggio della revisione");
       }
       
-      const result = await response.json();
       // Dopo il salvataggio, recupera il DVR aggiornato
       return await dvrApi.getDVR(id) as DVR;
     } catch (error) {
@@ -156,7 +155,8 @@ export const dvrApi = {
       }
       
       const data = await response.json();
-      return data.files || [];
+      const files = data.files || [];
+      return files.map(mapFileFromBackend);
     } catch (error) {
       console.error("Errore getDVRFiles:", error);
       throw error;
@@ -228,7 +228,7 @@ export const dvrApi = {
       }
       
       const versions = await response.json();
-      return versions;
+      return versions.map(mapVersionFromBackend);
     } catch (error) {
       console.error("Errore getDVRVersions:", error);
       return [];
@@ -337,6 +337,67 @@ export const dvrApi = {
 };
 
 /**
+ * Mappa un DVR dal formato backend a quello frontend
+ */
+function mapDVRFromBackend(backendDVR: any): DVR {
+  return {
+    id: backendDVR.uuid || backendDVR.id?.toString(),
+    nome: backendDVR.title,
+    descrizione: backendDVR.description || '',
+    numero_revisione: backendDVR.revision,
+    data_creazione: backendDVR.created_at,
+    data_ultima_modifica: backendDVR.updated_at,
+    stato: mapStatusFromBackend(backendDVR.status),
+    created_by: backendDVR.created_by || '',
+    updated_by: backendDVR.updated_by || '',
+    files_count: backendDVR.files_count,
+    files: backendDVR.files ? backendDVR.files.map(mapFileFromBackend) : undefined,
+  } as DVR;
+}
+
+/**
+ * Mappa un file dal formato backend a quello frontend
+ */
+function mapFileFromBackend(backendFile: any): FileMetadata {
+  return {
+    file_id: backendFile.id?.toString(),
+    dvr_id: backendFile.dvr_id?.toString(),
+    nome_file: backendFile.file_name,
+    file_size: backendFile.file_size || 0,
+    file_type: backendFile.file_type || '',
+    file_content: backendFile.file_content,
+    rischio_associato: backendFile.risk_id?.toString() || '',
+    rischio_nome: backendFile.risk_name || '',
+    stato_elaborazione_ai: backendFile.classification_result || 'IN_ELABORAZIONE',
+    motivazione_stato: backendFile.extraction_data?.motivation || '',
+    output_json_completo: backendFile.extraction_data,
+    output_json_modificato: backendFile.modified_extraction_data,
+    modificato_manualmente: backendFile.manually_modified || false,
+    inclusione_dvr: backendFile.include || false,
+    note_rspp: backendFile.notes || '',
+    created_at: backendFile.created_at || new Date().toISOString(),
+    updated_at: backendFile.updated_at || new Date().toISOString(),
+  };
+}
+
+/**
+ * Mappa una versione dal formato backend a quello frontend
+ */
+function mapVersionFromBackend(backendVersion: any): DVRVersion {
+  return {
+    id: backendVersion.id,
+    dvr_id: backendVersion.dvr_id?.toString(),
+    version: backendVersion.version,
+    nome: backendVersion.title,
+    descrizione: backendVersion.description || null,
+    stato: mapStatusFromBackend(backendVersion.status),
+    revision_note: backendVersion.revision_note || null,
+    created_at: backendVersion.created_at,
+    updated_at: backendVersion.updated_at,
+  };
+}
+
+/**
  * Mappa gli stati frontend a quelli backend
  */
 function mapStatusToBackend(status?: string): string {
@@ -355,8 +416,8 @@ function mapStatusToBackend(status?: string): string {
 /**
  * Mappa gli stati backend a quelli frontend
  */
-export function mapStatusFromBackend(status: string): string {
-  const statusMap: Record<string, string> = {
+export function mapStatusFromBackend(status: string): DVRStatus {
+  const statusMap: Record<string, DVRStatus> = {
     'draft': 'BOZZA',
     'completed': 'FINALIZZATO',
     'archived': 'ARCHIVIATO'
