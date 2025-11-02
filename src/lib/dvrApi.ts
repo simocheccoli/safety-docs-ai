@@ -365,13 +365,13 @@ export const dvrApi = {
  */
 function mapDVRFromBackend(backendDVR: any): DVR {
   return {
-    id: backendDVR.id?.toString(), // Use numeric ID, not UUID
+    id: backendDVR.id?.toString(),
     nome: backendDVR.title,
     descrizione: backendDVR.description || '',
     numero_revisione: backendDVR.revision,
     data_creazione: backendDVR.created_at,
     data_ultima_modifica: backendDVR.updated_at,
-    stato: backendDVR.status as DVRStatus,
+    stato: (backendDVR.status || 'BOZZA') as DVRStatus,
     company_id: backendDVR.company_id,
     company: backendDVR.company ? {
       id: backendDVR.company.id,
@@ -419,7 +419,7 @@ function mapVersionFromBackend(backendVersion: any): DVRVersion {
     version: backendVersion.version,
     nome: backendVersion.title,
     descrizione: backendVersion.description || null,
-    stato: backendVersion.status as DVRStatus,
+    stato: (backendVersion.status || 'BOZZA') as DVRStatus,
     revision_note: backendVersion.revision_note || null,
     created_at: backendVersion.created_at,
     updated_at: backendVersion.updated_at,

@@ -197,7 +197,7 @@ export default function DVRDetail() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          {dvr.stato !== 'completed' && dvr.stato !== 'archived' && (
+          {dvr.stato !== 'FINALIZZATO' && dvr.stato !== 'ARCHIVIATO' && (
             <Button onClick={handleFinalize}>
               <FileCheck className="h-4 w-4 mr-2" />
               Finalizza DVR

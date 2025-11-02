@@ -21,19 +21,25 @@ interface DVRInfoEditorProps {
 const dvrSchema = z.object({
   nome: z.string().trim().min(1, "Il nome è obbligatorio").max(200, "Il nome non può superare i 200 caratteri"),
   descrizione: z.string().max(1000, "La descrizione non può superare i 1000 caratteri").optional(),
-  stato: z.enum(['draft', 'completed', 'archived'])
+  stato: z.enum(['BOZZA', 'IN_REVISIONE', 'IN_APPROVAZIONE', 'APPROVATO', 'FINALIZZATO', 'ARCHIVIATO'] as const)
 });
 
 const statusLabels: Record<DVRStatus, string> = {
-  'draft': 'Bozza',
-  'completed': 'Completato',
-  'archived': 'Archiviato'
+  BOZZA: 'Bozza',
+  IN_REVISIONE: 'In Revisione',
+  IN_APPROVAZIONE: 'In Approvazione',
+  APPROVATO: 'Approvato',
+  FINALIZZATO: 'Finalizzato',
+  ARCHIVIATO: 'Archiviato',
 };
 
 const statusColors: Record<DVRStatus, string> = {
-  'draft': 'bg-gray-500',
-  'completed': 'bg-emerald-600',
-  'archived': 'bg-slate-400'
+  BOZZA: 'bg-yellow-500',
+  IN_REVISIONE: 'bg-blue-500',
+  IN_APPROVAZIONE: 'bg-purple-500',
+  APPROVATO: 'bg-green-500',
+  FINALIZZATO: 'bg-emerald-600',
+  ARCHIVIATO: 'bg-slate-400',
 };
 
 export function DVRInfoEditor({ dvr, onUpdate }: DVRInfoEditorProps) {
