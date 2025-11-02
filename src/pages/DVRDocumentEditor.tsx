@@ -114,11 +114,16 @@ export default function DVRDocumentEditor() {
         superDocRef.current = new SuperDoc({
           selector: '#superdoc-container',
           toolbar: '#superdoc-toolbar',
+          document: '/templates/dvr_template.docx', // Template DVR
           documentMode: 'editing',
           pagination: true,
           rulers: true,
           onReady: (event: any) => {
             console.log('SuperDoc pronto', event);
+            toast({
+              title: "Editor Caricato",
+              description: "Template DVR caricato con successo",
+            });
           },
           onEditorCreate: (event: any) => {
             console.log('Editor SuperDoc creato', event);
