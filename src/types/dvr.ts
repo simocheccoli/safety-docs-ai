@@ -13,13 +13,16 @@ export interface DVR {
   updated_by: string; // user_id
 }
 
-export interface DVRRevisione {
-  id: string;
+export interface DVRVersion {
+  id: number;
   dvr_id: string;
-  numero_revisione: number;
-  data_revisione: string;
-  user_id: string;
-  note: string;
+  version: number;
+  nome: string;
+  descrizione: string | null;
+  stato: DVRStatus;
+  revision_note: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface FileMetadata {

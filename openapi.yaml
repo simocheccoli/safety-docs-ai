@@ -1,0 +1,882 @@
+openapi: 3.0.0
+info:
+  title: DVR Management API
+  description: API per la gestione dei Documenti di Valutazione dei Rischi (DVR)
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://staging-api.example.com/v1
+    description: Staging server
+
+tags:
+  - name: DVR
+    description: Gestione dei Documenti di Valutazione dei Rischi
+  - name: Files
+    description: Gestione dei file allegati ai DVR
+  - name: Risks
+    description: Gestione dei rischi
+  - name: Elaborations
+    description: Gestione delle elaborazioni
+  - name: Auth
+    description: Autenticazione e autorizzazione
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    DVRStatus:
+      type: string
+      enum:
+        - BOZZA
+        - IN_REVISIONE
+        - IN_APPROVAZIONE
+        - APPROVATO
+        - FINALIZZATO
+        - ARCHIVIATO
+      description: |
+        Stati del DVR:
+        - BOZZA: Documento in fase di creazione
+        - IN_REVISIONE: Documento in fase di revisione
+        - IN_APPROVAZIONE: Documento in attesa di approvazione
+        - APPROVATO: Documento approvato
+        - FINALIZZATO: Documento finalizzato e pronto
+        - ARCHIVIATO: Documento archiviato
+
+    DVR:
+      type: object
+      required:
+        - id
+        - nome
+        - stato
+        - dataCreazione
+        - files
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "DVR Stabilimento Milano"
+        descrizione:
+          type: string
+          maxLength: 1000
+          example: "Documento di valutazione dei rischi per lo stabilimento di Milano"
+        stato:
+          $ref: '#/components/schemas/DVRStatus'
+        dataCreazione:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:30:00Z"
+        dataModifica:
+          type: string
+          format: date-time
+          example: "2025-01-20T14:45:00Z"
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/DVRFile'
+
+    DVRFile:
+      type: object
+      required:
+        - id
+        - nome
+        - tipo
+        - dimensione
+        - dataCaricamento
+      properties:
+        id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+          example: "planimetria.pdf"
+        tipo:
+          type: string
+          example: "application/pdf"
+        dimensione:
+          type: integer
+          format: int64
+          description: Dimensione in bytes
+          example: 1048576
+        dataCaricamento:
+          type: string
+          format: date-time
+        url:
+          type: string
+          format: uri
+          example: "https://storage.example.com/files/abc123"
+        anteprima:
+          type: string
+          description: Anteprima del contenuto estratto dal file
+        strutturaJson:
+          type: object
+          description: Struttura dati estratta dal file
+        classificazione:
+          type: string
+          example: "Planimetria"
+
+    DVRCreateRequest:
+      type: object
+      required:
+        - nome
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 200
+        descrizione:
+          type: string
+          maxLength: 1000
+
+    DVRUpdateRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 200
+        descrizione:
+          type: string
+          maxLength: 1000
+        stato:
+          $ref: '#/components/schemas/DVRStatus'
+
+    FileUploadResponse:
+      type: object
+      required:
+        - fileId
+        - url
+      properties:
+        fileId:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        nome:
+          type: string
+        tipo:
+          type: string
+        dimensione:
+          type: integer
+
+    Risk:
+      type: object
+      required:
+        - id
+        - name
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Rischio caduta dall'alto"
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, archived]
+        probability:
+          type: string
+          enum: [low, medium, high, very_high]
+        severity:
+          type: string
+          enum: [low, medium, high, very_high]
+        riskLevel:
+          type: string
+          enum: [acceptable, moderate, high, critical]
+        mitigationMeasures:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    RiskCreateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        probability:
+          type: string
+          enum: [low, medium, high, very_high]
+        severity:
+          type: string
+          enum: [low, medium, high, very_high]
+        mitigationMeasures:
+          type: array
+          items:
+            type: string
+
+    Elaboration:
+      type: object
+      required:
+        - id
+        - title
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pending, in_progress, completed, failed]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        result:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - role
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, editor, viewer]
+        createdAt:
+          type: string
+          format: date-time
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+
+    LoginResponse:
+      type: object
+      required:
+        - token
+        - user
+      properties:
+        token:
+          type: string
+          description: JWT token per l'autenticazione
+        user:
+          $ref: '#/components/schemas/User'
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+security:
+  - bearerAuth: []
+
+paths:
+  # AUTH ENDPOINTS
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login utente
+      description: Autentica un utente e restituisce un token JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login effettuato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Credenziali non valide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Ottieni utente corrente
+      description: Restituisce i dati dell'utente autenticato
+      responses:
+        '200':
+          description: Dati utente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Non autenticato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # DVR ENDPOINTS
+  /dvr:
+    get:
+      tags:
+        - DVR
+      summary: Lista tutti i DVR
+      description: Restituisce la lista di tutti i DVR con possibilità di filtrare e ordinare
+      parameters:
+        - name: stato
+          in: query
+          description: Filtra per stato
+          schema:
+            $ref: '#/components/schemas/DVRStatus'
+        - name: orderBy
+          in: query
+          description: Campo per ordinamento
+          schema:
+            type: string
+            enum: [dataCreazione, dataModifica, nome]
+            default: dataCreazione
+        - name: order
+          in: query
+          description: Direzione ordinamento
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: page
+          in: query
+          description: Numero pagina (1-indexed)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Elementi per pagina
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Lista DVR
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DVR'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      totalPages:
+                        type: integer
+
+    post:
+      tags:
+        - DVR
+      summary: Crea nuovo DVR
+      description: Crea un nuovo Documento di Valutazione dei Rischi
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DVRCreateRequest'
+      responses:
+        '201':
+          description: DVR creato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DVR'
+        '400':
+          description: Dati non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dvr/{dvrId}:
+    parameters:
+      - name: dvrId
+        in: path
+        required: true
+        description: ID del DVR
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags:
+        - DVR
+      summary: Ottieni DVR per ID
+      description: Restituisce i dettagli di un DVR specifico
+      responses:
+        '200':
+          description: Dettagli DVR
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DVR'
+        '404':
+          description: DVR non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      tags:
+        - DVR
+      summary: Aggiorna DVR
+      description: Aggiorna i dati di un DVR esistente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DVRUpdateRequest'
+      responses:
+        '200':
+          description: DVR aggiornato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DVR'
+        '400':
+          description: Dati non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: DVR non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - DVR
+      summary: Elimina DVR
+      description: Elimina un DVR e tutti i suoi file associati
+      responses:
+        '204':
+          description: DVR eliminato con successo
+        '404':
+          description: DVR non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dvr/{dvrId}/document:
+    parameters:
+      - name: dvrId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags:
+        - DVR
+      summary: Ottieni documento DVR
+      description: Restituisce il contenuto del documento DVR in formato HTML
+      responses:
+        '200':
+          description: Contenuto documento
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: string
+                    description: Contenuto HTML del documento
+                  lastModified:
+                    type: string
+                    format: date-time
+        '404':
+          description: Documento non trovato
+
+    put:
+      tags:
+        - DVR
+      summary: Aggiorna documento DVR
+      description: Aggiorna il contenuto del documento DVR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  description: Contenuto HTML del documento
+      responses:
+        '200':
+          description: Documento aggiornato
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  lastModified:
+                    type: string
+                    format: date-time
+
+  # FILE ENDPOINTS
+  /dvr/{dvrId}/files:
+    parameters:
+      - name: dvrId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    post:
+      tags:
+        - Files
+      summary: Carica file
+      description: Carica un nuovo file e associalo al DVR
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: File caricato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUploadResponse'
+        '400':
+          description: File non valido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dvr/{dvrId}/files/{fileId}:
+    parameters:
+      - name: dvrId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: fileId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags:
+        - Files
+      summary: Ottieni dettagli file
+      description: Restituisce i dettagli di un file specifico
+      responses:
+        '200':
+          description: Dettagli file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DVRFile'
+        '404':
+          description: File non trovato
+
+    delete:
+      tags:
+        - Files
+      summary: Elimina file
+      description: Elimina un file dal DVR
+      responses:
+        '204':
+          description: File eliminato con successo
+        '404':
+          description: File non trovato
+
+    patch:
+      tags:
+        - Files
+      summary: Aggiorna file
+      description: Aggiorna i metadati o il contenuto estratto di un file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                classificazione:
+                  type: string
+                anteprima:
+                  type: string
+                strutturaJson:
+                  type: object
+      responses:
+        '200':
+          description: File aggiornato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DVRFile'
+
+  # RISK ENDPOINTS
+  /risks:
+    get:
+      tags:
+        - Risks
+      summary: Lista rischi
+      description: Restituisce la lista di tutti i rischi
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, active, archived]
+        - name: riskLevel
+          in: query
+          schema:
+            type: string
+            enum: [acceptable, moderate, high, critical]
+      responses:
+        '200':
+          description: Lista rischi
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Risk'
+
+    post:
+      tags:
+        - Risks
+      summary: Crea rischio
+      description: Crea un nuovo rischio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiskCreateRequest'
+      responses:
+        '201':
+          description: Rischio creato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Risk'
+
+  /risks/{riskId}:
+    parameters:
+      - name: riskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags:
+        - Risks
+      summary: Ottieni rischio
+      responses:
+        '200':
+          description: Dettagli rischio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Risk'
+        '404':
+          description: Rischio non trovato
+
+    put:
+      tags:
+        - Risks
+      summary: Aggiorna rischio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiskCreateRequest'
+      responses:
+        '200':
+          description: Rischio aggiornato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Risk'
+
+    delete:
+      tags:
+        - Risks
+      summary: Elimina rischio
+      responses:
+        '204':
+          description: Rischio eliminato
+        '404':
+          description: Rischio non trovato
+
+  # ELABORATION ENDPOINTS
+  /elaborations:
+    get:
+      tags:
+        - Elaborations
+      summary: Lista elaborazioni
+      responses:
+        '200':
+          description: Lista elaborazioni
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Elaboration'
+
+    post:
+      tags:
+        - Elaborations
+      summary: Avvia elaborazione
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - type
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                  enum: [risk_analysis, document_generation, data_extraction]
+                parameters:
+                  type: object
+      responses:
+        '201':
+          description: Elaborazione avviata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Elaboration'
+
+  /elaborations/{elaborationId}:
+    parameters:
+      - name: elaborationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags:
+        - Elaborations
+      summary: Ottieni stato elaborazione
+      responses:
+        '200':
+          description: Stato elaborazione
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Elaboration'
+        '404':
+          description: Elaborazione non trovata

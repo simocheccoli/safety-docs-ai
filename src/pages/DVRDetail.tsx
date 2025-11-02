@@ -1,28 +1,27 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Save, FileCheck, AlertTriangle, History, FileEdit } from "lucide-react";
+import { ArrowLeft, Plus, Save, FileCheck, AlertTriangle, FileEdit, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getDVRRevisions, createNewRevision } from "@/lib/dvrStorage";
-import { DVR, DVRRevisione } from "@/types/dvr";
+import { DVR } from "@/types/dvr";
 import { toast } from "@/hooks/use-toast";
 import { FileDetailCard } from "@/components/dvr/FileDetailCard";
 import { DVRInfoEditor, statusLabels, statusColors } from "@/components/dvr/DVRInfoEditor";
 import { dvrApi } from "@/lib/dvrApi";
+import { DVRVersionHistory } from "@/components/dvr/DVRVersionHistory";
+import { SaveRevisionDialog } from "@/components/dvr/SaveRevisionDialog";
 
 export default function DVRDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [dvr, setDvr] = useState<DVR | null>(null);
   const [files, setFiles] = useState<any[]>([]);
-  const [revisions, setRevisions] = useState<DVRRevisione[]>([]);
-  const [revisionNote, setRevisionNote] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [showRevisionDialog, setShowRevisionDialog] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -33,16 +32,14 @@ export default function DVRDetail() {
   const loadDVR = async () => {
     if (!id) return;
     try {
-      const [dvrData, filesData, revisionsData] = await Promise.all([
+      const [dvrData, filesData] = await Promise.all([
         dvrApi.getDVR(id),
-        dvrApi.getDVRFiles(id),
-        Promise.resolve(getDVRRevisions(id))
+        dvrApi.getDVRFiles(id)
       ]);
       
       if (dvrData) {
         setDvr(dvrData);
         setFiles(filesData);
-        setRevisions(revisionsData);
       }
     } catch (error) {
       toast({
@@ -54,9 +51,9 @@ export default function DVRDetail() {
   };
 
   const handleFinalize = async () => {
-    if (!id) return;
+    if (!id || !dvr) return;
     try {
-      await dvrApi.changeStatus(id, 'FINALIZZATO');
+      await dvrApi.finalize(id, dvr.nome);
       loadDVR();
       toast({
         title: "DVR Finalizzato",
@@ -71,23 +68,55 @@ export default function DVRDetail() {
     }
   };
 
-  const handleCreateRevision = () => {
-    if (!id || !revisionNote.trim()) {
+  const handleSave = async () => {
+    if (!id || !dvr) return;
+    
+    try {
+      setIsSaving(true);
+      await dvrApi.updateDVR(id, {
+        data_ultima_modifica: new Date().toISOString()
+      });
+      
+      toast({
+        title: "Salvato",
+        description: "Le modifiche sono state salvate con successo",
+      });
+      
+      loadDVR();
+    } catch (error) {
       toast({
         title: "Errore",
-        description: "Inserisci una nota per la revisione",
+        description: error instanceof Error ? error.message : "Impossibile salvare le modifiche",
         variant: "destructive"
       });
-      return;
+    } finally {
+      setIsSaving(false);
     }
+  };
+
+  const handleSaveRevision = async (revisionNote: string) => {
+    if (!id || !dvr) return;
     
-    createNewRevision(id, 'current_user', revisionNote);
-    setRevisionNote("");
-    loadDVR();
-    toast({
-      title: "Nuova Revisione Creata",
-      description: "La revisione è stata registrata con successo",
-    });
+    try {
+      setIsSaving(true);
+      await dvrApi.saveRevision(id, {}, revisionNote);
+      
+      toast({
+        title: "Revisione Salvata",
+        description: "La nuova revisione è stata creata con successo",
+      });
+      
+      setShowRevisionDialog(false);
+      loadDVR();
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: error instanceof Error ? error.message : "Impossibile salvare la revisione",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleAddFiles = () => {
@@ -137,6 +166,25 @@ export default function DVRDetail() {
             <FileEdit className="h-4 w-4 mr-2" />
             Modifica Documento
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button disabled={isSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                Salva
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleSave}>
+                <Save className="h-4 w-4 mr-2" />
+                Salva
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowRevisionDialog(true)}>
+                <Save className="h-4 w-4 mr-2" />
+                Salva Revisione
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {dvr.stato !== 'FINALIZZATO' && dvr.stato !== 'ARCHIVIATO' && (
             <Button onClick={handleFinalize}>
               <FileCheck className="h-4 w-4 mr-2" />
@@ -179,7 +227,7 @@ export default function DVRDetail() {
       <Tabs defaultValue="files" className="w-full">
         <TabsList>
           <TabsTrigger value="files">File Elaborati</TabsTrigger>
-          <TabsTrigger value="revisions">Storico Revisioni</TabsTrigger>
+          <TabsTrigger value="versions">Versioni</TabsTrigger>
         </TabsList>
 
         <TabsContent value="files" className="space-y-4">
@@ -204,63 +252,21 @@ export default function DVRDetail() {
           )}
         </TabsContent>
 
-        <TabsContent value="revisions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Crea Nuova Revisione</CardTitle>
-              <CardDescription>
-                Una nuova revisione registra lo stato attuale del DVR con data certa
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="revision-note">Note Revisione</Label>
-                <Textarea
-                  id="revision-note"
-                  placeholder="Descrivi le modifiche apportate in questa revisione..."
-                  value={revisionNote}
-                  onChange={(e) => setRevisionNote(e.target.value)}
-                  rows={4}
-                />
-              </div>
-              <Button onClick={handleCreateRevision}>
-                <History className="h-4 w-4 mr-2" />
-                Crea Revisione
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Storico Revisioni</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {revisions.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  Nessuna revisione registrata
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {revisions.map((rev) => (
-                    <div key={rev.id} className="border-l-4 border-primary pl-4 py-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge>Rev. {rev.numero_revisione}</Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(rev.data_revisione).toLocaleString('it-IT')}
-                        </span>
-                      </div>
-                      <p className="text-sm">{rev.note}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Utente: {rev.user_id}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="versions" className="space-y-4">
+          <DVRVersionHistory 
+            dvrId={id!} 
+            currentVersion={dvr.numero_revisione}
+            onVersionRestored={loadDVR}
+          />
         </TabsContent>
       </Tabs>
+
+      <SaveRevisionDialog
+        open={showRevisionDialog}
+        onOpenChange={setShowRevisionDialog}
+        onSave={handleSaveRevision}
+        isSaving={isSaving}
+      />
     </div>
   );
 }

@@ -7,8 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileWithClassification, FileMetadata, DVR } from "@/types/dvr";
-import { saveDVRFile, saveDVR, getDVRById, updateDVR } from "@/lib/dvrStorage";
+import { FileWithClassification } from "@/types/dvr";
+import { dvrApi } from "@/lib/dvrApi";
 import { toast } from "@/hooks/use-toast";
 import {
   Accordion,
@@ -26,9 +26,8 @@ interface FileReviewStepProps {
 
 export function FileReviewStep({ files, existingDvrId, onComplete, onBack }: FileReviewStepProps) {
   const [reviewedFiles, setReviewedFiles] = useState<FileWithClassification[]>(files);
-  const [dvrName, setDvrName] = useState<string>(
-    existingDvrId ? getDVRById(existingDvrId)?.nome || "" : `DVR ${new Date().toLocaleDateString('it-IT')}`
-  );
+  const [dvrName, setDvrName] = useState<string>(`DVR ${new Date().toLocaleDateString('it-IT')}`);
+  const [saving, setSaving] = useState(false);
 
   const handleInclusionChange = (fileId: string, included: boolean) => {
     setReviewedFiles(prev => prev.map(f =>
@@ -46,7 +45,7 @@ export function FileReviewStep({ files, existingDvrId, onComplete, onBack }: Fil
     ));
   };
 
-  const handleSaveAndComplete = () => {
+  const handleSaveAndComplete = async () => {
     if (!dvrName.trim()) {
       toast({
         title: "Errore",
@@ -56,46 +55,50 @@ export function FileReviewStep({ files, existingDvrId, onComplete, onBack }: Fil
       return;
     }
 
-    let finalDvrId = existingDvrId;
+    try {
+      setSaving(true);
 
-    // Se non esiste un DVR, creane uno nuovo
-    if (!existingDvrId) {
-      const newDvr: DVR = {
-        id: crypto.randomUUID(),
-        nome: dvrName,
-        numero_revisione: 1,
-        data_creazione: new Date().toISOString(),
-        data_ultima_modifica: new Date().toISOString(),
-        stato: 'BOZZA',
-        created_by: 'current_user',
-        updated_by: 'current_user'
-      };
-      saveDVR(newDvr);
-      finalDvrId = newDvr.id;
-    } else {
-      // Aggiorna DVR esistente
-      updateDVR(existingDvrId, {
-        nome: dvrName,
-        updated_by: 'current_user'
+      // Crea il DVR con i file tramite API
+      const createdDvr = await dvrApi.createDVR(
+        dvrName,
+        reviewedFiles.map(f => f.file)
+      );
+
+      // Aggiorna le classificazioni e le inclusioni per ogni file
+      const fileUpdatePromises = reviewedFiles.map(async (fileObj, index) => {
+        // Il backend restituisce i file, dobbiamo trovare il file corrispondente
+        const backendFile = (createdDvr as any).files?.[index];
+        if (!backendFile) return;
+
+        await dvrApi.updateFile(
+          createdDvr.id,
+          backendFile.id,
+          {
+            rischio_associato: fileObj.metadata.rischio_associato,
+            inclusione_dvr: fileObj.metadata.inclusione_dvr,
+            note_rspp: fileObj.metadata.note_rspp,
+          }
+        );
       });
+
+      await Promise.all(fileUpdatePromises);
+
+      toast({
+        title: "DVR Creato",
+        description: `${reviewedFiles.length} documenti sono stati salvati con successo`,
+      });
+
+      onComplete(createdDvr.id);
+    } catch (error) {
+      console.error("Errore nel salvataggio:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile creare il DVR. Riprova.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
-
-    // Salva tutti i file associati al DVR
-    reviewedFiles.forEach(fileObj => {
-      const metadata: FileMetadata = {
-        ...fileObj.metadata,
-        dvr_id: finalDvrId!,
-        updated_at: new Date().toISOString()
-      } as FileMetadata;
-      saveDVRFile(metadata);
-    });
-
-    toast({
-      title: existingDvrId ? "File Aggiunti" : "DVR Creato",
-      description: `${reviewedFiles.length} documenti sono stati salvati con successo`,
-    });
-
-    onComplete(finalDvrId!);
   };
 
   const getStatusIcon = (status?: string) => {
@@ -237,13 +240,13 @@ export function FileReviewStep({ files, existingDvrId, onComplete, onBack }: Fil
         </Accordion>
 
         <div className="flex justify-between gap-3">
-          <Button variant="outline" onClick={onBack}>
+          <Button variant="outline" onClick={onBack} disabled={saving}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Indietro
           </Button>
-          <Button onClick={handleSaveAndComplete} size="lg">
+          <Button onClick={handleSaveAndComplete} size="lg" disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
-            Salva e Completa
+            {saving ? "Salvataggio..." : "Salva e Completa"}
           </Button>
         </div>
       </CardContent>

@@ -1,8 +1,7 @@
-import { FileMetadata, DVR, DVRRevisione } from '@/types/dvr';
+import { FileMetadata, DVR } from '@/types/dvr';
 
 const DVR_STORAGE_KEY = 'hseb5_dvr_list';
 const FILES_STORAGE_KEY = 'hseb5_dvr_files';
-const REVISIONS_STORAGE_KEY = 'hseb5_dvr_revisions';
 
 // DVR Management
 export const getDVRList = (): DVR[] => {
@@ -45,12 +44,14 @@ export const deleteDVR = (dvrId: string): void => {
   const dvrs = getDVRList().filter(d => d.id !== dvrId);
   localStorage.setItem(DVR_STORAGE_KEY, JSON.stringify(dvrs));
   
-  // Delete associated files and revisions
+  // Delete associated files
   const files = getDVRFiles().filter(f => f.dvr_id !== dvrId);
   localStorage.setItem(FILES_STORAGE_KEY, JSON.stringify(files));
   
-  const revisions = getDVRRevisions(dvrId).filter(r => r.dvr_id !== dvrId);
-  localStorage.setItem(REVISIONS_STORAGE_KEY, JSON.stringify(revisions));
+  // Delete associated versions
+  const versions = JSON.parse(localStorage.getItem('dvr_versions') || '{}');
+  delete versions[dvrId];
+  localStorage.setItem('dvr_versions', JSON.stringify(versions));
 };
 
 // File Management
@@ -94,43 +95,4 @@ export const deleteDVRFile = (fileId: string): void => {
 
 export const getDVRFileById = (fileId: string): FileMetadata | undefined => {
   return getDVRFiles().find(f => f.file_id === fileId);
-};
-
-// Revision Management
-export const getDVRRevisions = (dvrId: string): DVRRevisione[] => {
-  const data = localStorage.getItem(REVISIONS_STORAGE_KEY);
-  const allRevisions = data ? JSON.parse(data) : [];
-  return allRevisions.filter((r: DVRRevisione) => r.dvr_id === dvrId);
-};
-
-export const saveDVRRevision = (revision: DVRRevisione): void => {
-  const data = localStorage.getItem(REVISIONS_STORAGE_KEY);
-  const revisions = data ? JSON.parse(data) : [];
-  revisions.push(revision);
-  localStorage.setItem(REVISIONS_STORAGE_KEY, JSON.stringify(revisions));
-};
-
-export const createNewRevision = (dvrId: string, userId: string, note: string): void => {
-  const dvr = getDVRById(dvrId);
-  if (!dvr) return;
-  
-  const newRevisionNumber = dvr.numero_revisione + 1;
-  
-  // Create revision record
-  const revision: DVRRevisione = {
-    id: crypto.randomUUID(),
-    dvr_id: dvrId,
-    numero_revisione: newRevisionNumber,
-    data_revisione: new Date().toISOString(),
-    user_id: userId,
-    note
-  };
-  
-  saveDVRRevision(revision);
-  
-  // Update DVR
-  updateDVR(dvrId, {
-    numero_revisione: newRevisionNumber,
-    updated_by: userId
-  });
 };

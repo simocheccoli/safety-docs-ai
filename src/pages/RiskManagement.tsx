@@ -6,29 +6,42 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RiskTable } from "@/components/RiskTable";
 import { RiskType, RiskStatus } from "@/types/risk";
-import { getRiskTypes } from "@/lib/riskStorage";
+import { getRiskTypes } from "@/lib/riskApi";
+import { useToast } from "@/hooks/use-toast";
 
 const RiskManagement = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [risks, setRisks] = useState<RiskType[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<RiskStatus | "all">("all");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadRisks();
     
     const handleUpdate = () => loadRisks();
-    window.addEventListener('storage', handleUpdate);
     window.addEventListener('riskTypesUpdated', handleUpdate);
     
     return () => {
-      window.removeEventListener('storage', handleUpdate);
       window.removeEventListener('riskTypesUpdated', handleUpdate);
     };
   }, []);
 
-  const loadRisks = () => {
-    setRisks(getRiskTypes());
+  const loadRisks = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getRiskTypes();
+      setRisks(data);
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare i rischi",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCreate = () => {

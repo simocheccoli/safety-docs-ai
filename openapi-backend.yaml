@@ -1,0 +1,1128 @@
+openapi: 3.0.3
+info:
+  title: 'Bio 5 Rischio Chimico API Documentation'
+  description: ''
+  version: 1.0.0
+servers:
+  -
+    url: 'http://localhost:8000'
+tags:
+  -
+    name: Endpoints
+    description: ''
+  -
+    name: Processi
+    description: ''
+  -
+    name: Rischi
+    description: ''
+paths:
+  /api/webhook-endpoint:
+    post:
+      summary: ''
+      operationId: postApiWebhookEndpoint
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+  /api/webhook-endpoint/update:
+    post:
+      summary: ''
+      operationId: postApiWebhookEndpointUpdate
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+  /api/rischi:
+    get:
+      summary: "Lista di tutti i processi\n\nRestituisce l'elenco completo dei processi caricati e in elaborazione."
+      operationId: listaDiTuttiIProcessiRestituisceLelencoCompletoDeiProcessiCaricatiEInElaborazione
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: true
+                  count: 2
+                  data:
+                    -
+                      id: 1
+                      title: 'Analisi Rischio Ferrara'
+                      status: completed
+                      created_at: '2025-10-16T10:15:00Z'
+                    -
+                      id: 2
+                      title: 'Valutazione Parma'
+                      status: elaborating
+                      created_at: '2025-10-16T11:00:00Z'
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 2
+                  data:
+                    type: array
+                    example:
+                      -
+                        id: 1
+                        title: 'Analisi Rischio Ferrara'
+                        status: completed
+                        created_at: '2025-10-16T10:15:00Z'
+                      -
+                        id: 2
+                        title: 'Valutazione Parma'
+                        status: elaborating
+                        created_at: '2025-10-16T11:00:00Z'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        title:
+                          type: string
+                          example: 'Analisi Rischio Ferrara'
+                        status:
+                          type: string
+                          example: completed
+                        created_at:
+                          type: string
+                          example: '2025-10-16T10:15:00Z'
+      tags:
+        - Processi
+      security: []
+    post:
+      summary: "Carica un nuovo processo\n\nPermette di caricare uno o più file per creare un nuovo processo."
+      operationId: caricaUnNuovoProcessoPermetteDiCaricareUnoOPiFilePerCreareUnNuovoProcesso
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: true
+                  message: 'Caricamento dei file avviato'
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 'Caricamento dei file avviato'
+        422:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Validation error'
+                properties:
+                  message:
+                    type: string
+                    example: 'Validation error'
+        500:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: 'Errore nel caricamento dei file'
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Errore nel caricamento dei file'
+      tags:
+        - Processi
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: 'Titolo del processo.'
+                  example: architecto
+                  nullable: false
+                files:
+                  type: array
+                  description: 'Must not be greater than 20480 characters.'
+                  example:
+                    - 'n'
+                  items:
+                    type: string
+                'files[]':
+                  type: string
+                  format: binary
+                  description: 'File PDF da elaborare.'
+                  nullable: false
+              required:
+                - title
+                - files
+                - 'files[]'
+      security: []
+  '/api/rischi/{id}':
+    get:
+      summary: "Dettaglio di un singolo processo\n\nRestituisce le informazioni dettagliate di un processo specifico e la lista dei file associati."
+      operationId: dettaglioDiUnSingoloProcessoRestituisceLeInformazioniDettagliateDiUnProcessoSpecificoELaListaDeiFileAssociati
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: true
+                  document:
+                    id: 5
+                    title: 'Analisi rischio sede Bologna'
+                    status: completed
+                    created_at: '2025-10-16T09:00:00Z'
+                  files:
+                    - report.pdf
+                    - dati.xlsx
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  document:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 5
+                      title:
+                        type: string
+                        example: 'Analisi rischio sede Bologna'
+                      status:
+                        type: string
+                        example: completed
+                      created_at:
+                        type: string
+                        example: '2025-10-16T09:00:00Z'
+                  files:
+                    type: array
+                    example:
+                      - report.pdf
+                      - dati.xlsx
+                    items:
+                      type: string
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: 'Documento non trovato'
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Documento non trovato'
+      tags:
+        - Processi
+      security: []
+    delete:
+      summary: "Elimina un processo\n\nRimuove un processo dal sistema."
+      operationId: eliminaUnProcessoRimuoveUnProcessoDalSistema
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: true
+                  message: 'Documento eliminato con successo!'
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 'Documento eliminato con successo!'
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: 'Documento non trovato'
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Documento non trovato'
+      tags:
+        - Processi
+      security: []
+    put:
+      summary: 'Aggiorna un processo di rischio.'
+      operationId: aggiornaUnProcessoDiRischio
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: true
+                  message: 'Processo aggiornato correttamente'
+                  data:
+                    id: 1
+                    title: 'Analisi Rischio Aggiornata'
+                    status: elaborating
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 'Processo aggiornato correttamente'
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      title:
+                        type: string
+                        example: 'Analisi Rischio Aggiornata'
+                      status:
+                        type: string
+                        example: elaborating
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: 'Processo non trovato'
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Processo non trovato'
+        422:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: 'Dati non validi'
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Dati non validi'
+      tags:
+        - Rischi
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: 'Titolo aggiornato del processo.'
+                  example: '"Analisi Rischio Aggiornata"'
+                  nullable: false
+      security: []
+    parameters:
+      -
+        in: path
+        name: id
+        description: "L'ID del processo."
+        example: 5
+        required: true
+        schema:
+          type: integer
+  /api/rischi/status:
+    post:
+      summary: "Aggiorna lo stato di un processo\n\nAggiorna lo stato di un processo (es. da \"elaborating\" a \"completed\")."
+      operationId: aggiornaLoStatoDiUnProcessoAggiornaLoStatoDiUnProcessoesDaelaboratingAcompleted
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: true
+                  message: 'Stato aggiornato'
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 'Stato aggiornato'
+        400:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: 'Parametri mancanti'
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Parametri mancanti'
+      tags:
+        - Processi
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                process_id:
+                  type: string
+                  description: 'ID del processo con prefisso.'
+                  example: process_7
+                  nullable: false
+                status:
+                  type: string
+                  description: 'Stato del processo.'
+                  example: completed
+                  nullable: false
+              required:
+                - process_id
+                - status
+      security: []
+  '/api/rischi/{id}/pdf':
+    get:
+      summary: "Scarica i PDF del processo in formato ZIP\n\nRestituisce tutti i file PDF del processo in un archivio ZIP."
+      operationId: scaricaIPDFDelProcessoInFormatoZIPRestituisceTuttiIFilePDFDelProcessoInUnArchivioZIP
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 'binary File ZIP contenente i PDF generati.'
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: 'Documento non trovato.'
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Documento non trovato.'
+        500:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: 'Errore durante la creazione del file zip.'
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Errore durante la creazione del file zip.'
+      tags:
+        - Processi
+      security: []
+    parameters:
+      -
+        in: path
+        name: id
+        description: "L'ID del processo da scaricare."
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/rischi/{id}/excel':
+    get:
+      summary: "Scarica il file Excel del processo\n\nRestituisce il file Excel generato per un processo completato."
+      operationId: scaricaIlFileExcelDelProcessoRestituisceIlFileExcelGeneratoPerUnProcessoCompletato
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 'restituisce il file Excel generato per un processo completato.'
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: 'Documento non trovato.'
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Documento non trovato.'
+        500:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: 'Errore durante la creazione del file Excel.'
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Errore durante la creazione del file Excel.'
+      tags:
+        - Processi
+      security: []
+    parameters:
+      -
+        in: path
+        name: id
+        description: "L'ID del processo da scaricare."
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/rischi/{id}/file/{filename}':
+    get:
+      summary: 'Scarica un singolo file appartenente a un processo di rischio.'
+      operationId: scaricaUnSingoloFileAppartenenteAUnProcessoDiRischio
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 'file/binary Il file richiesto.'
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: 'File non trovato'
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'File non trovato'
+        500:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: 'Errore durante il download del file'
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Errore durante il download del file'
+      tags:
+        - Rischi
+      security: []
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'ID del processo.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: filename
+        description: 'Nome del file da scaricare.'
+        example: architecto
+        required: true
+        schema:
+          type: string
+  /api/risks:
+    get:
+      summary: "Lista dei rischi\n\nRestituisce l'elenco completo delle configurazioni di rischio presenti nel sistema."
+      operationId: listaDeiRischiRestituisceLelencoCompletoDelleConfigurazioniDiRischioPresentiNelSistema
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                example:
+                  -
+                    id: 1
+                    uuid: 550e8400-e29b-41d4-a716-446655440000
+                    name: 'Rischio Rumore'
+                    description: 'Breve descrizione del rischio…'
+                    content_expectations: "Es. l'AI troverà dati di esposizione sonora…"
+                    output_structure: []
+                    prompt: null
+                    state: draft
+                    version: 1
+                    created_at: '2025-11-01T14:00:00Z'
+                    updated_at: '2025-11-01T14:00:00Z'
+      tags:
+        - Rischi
+      security: []
+    post:
+      summary: "Crea un nuovo rischio\n\nCrea una nuova configurazione di rischio a partire dai dati forniti."
+      operationId: creaUnNuovoRischioCreaUnaNuovaConfigurazioneDiRischioAPartireDaiDatiForniti
+      description: ''
+      parameters: []
+      responses:
+        201:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  id: 2
+                  uuid: 550e8400-e29b-41d4-a716-446655440001
+                  name: 'Nuovo Rischio'
+                  description: null
+                  content_expectations: null
+                  output_structure: []
+                  prompt: null
+                  state: draft
+                  version: 1
+                  created_at: '2025-11-02T08:00:00Z'
+                  updated_at: '2025-11-02T08:00:00Z'
+                properties:
+                  id:
+                    type: integer
+                    example: 2
+                  uuid:
+                    type: string
+                    example: 550e8400-e29b-41d4-a716-446655440001
+                  name:
+                    type: string
+                    example: 'Nuovo Rischio'
+                  description:
+                    type: string
+                    example: null
+                  content_expectations:
+                    type: string
+                    example: null
+                  output_structure:
+                    type: array
+                    example: []
+                  prompt:
+                    type: string
+                    example: null
+                  state:
+                    type: string
+                    example: draft
+                  version:
+                    type: integer
+                    example: 1
+                  created_at:
+                    type: string
+                    example: '2025-11-02T08:00:00Z'
+                  updated_at:
+                    type: string
+                    example: '2025-11-02T08:00:00Z'
+        422:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'The given data was invalid'
+                  errors:
+                    name:
+                      - 'The name field is required.'
+                properties:
+                  message:
+                    type: string
+                    example: 'The given data was invalid'
+                  errors:
+                    type: object
+                    properties:
+                      name:
+                        type: array
+                        example:
+                          - 'The name field is required.'
+                        items:
+                          type: string
+      tags:
+        - Rischi
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                uuid:
+                  type: string
+                  description: 'UUID da usare per il rischio.'
+                  example: '"550e8400-e29b-41d4-a716-446655440000"'
+                  nullable: true
+                name:
+                  type: string
+                  description: 'Nome del rischio.'
+                  example: '"Rischio Rumore"'
+                  nullable: false
+                description:
+                  type: string
+                  description: 'Descrizione del rischio.'
+                  example: '"Breve descrizione…"'
+                  nullable: true
+                content_expectations:
+                  type: string
+                  description: 'Informazioni sul contenuto previsto nei documenti.'
+                  example: architecto
+                  nullable: true
+                output_structure:
+                  type: array
+                  description: 'Struttura dei campi da estrarre.'
+                  example:
+                    - architecto
+                  items:
+                    type: string
+                    nullable: true
+                prompt:
+                  type: string
+                  description: 'Prompt AI generato.'
+                  example: architecto
+                  nullable: true
+                state:
+                  type: string
+                  description: 'Stato del rischio (draft, published, archived).'
+                  example: '"draft"'
+                  nullable: true
+              required:
+                - name
+      security: []
+  '/api/risks/{id}':
+    get:
+      summary: "Dettaglio di un rischio\n\nRestituisce la configurazione di rischio corrispondente all'identificativo specificato."
+      operationId: dettaglioDiUnRischioRestituisceLaConfigurazioneDiRischioCorrispondenteAllidentificativoSpecificato
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  id: 1
+                  uuid: 550e8400-e29b-41d4-a716-446655440000
+                  name: 'Rischio Rumore'
+                  description: 'Breve descrizione del rischio…'
+                  content_expectations: null
+                  output_structure: []
+                  prompt: null
+                  state: draft
+                  version: 1
+                  created_at: '2025-11-01T14:00:00Z'
+                  updated_at: '2025-11-01T14:00:00Z'
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  uuid:
+                    type: string
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                  name:
+                    type: string
+                    example: 'Rischio Rumore'
+                  description:
+                    type: string
+                    example: 'Breve descrizione del rischio…'
+                  content_expectations:
+                    type: string
+                    example: null
+                  output_structure:
+                    type: array
+                    example: []
+                  prompt:
+                    type: string
+                    example: null
+                  state:
+                    type: string
+                    example: draft
+                  version:
+                    type: integer
+                    example: 1
+                  created_at:
+                    type: string
+                    example: '2025-11-01T14:00:00Z'
+                  updated_at:
+                    type: string
+                    example: '2025-11-01T14:00:00Z'
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'No query results for model [App\Models\Risk] 999'
+                properties:
+                  message:
+                    type: string
+                    example: 'No query results for model [App\Models\Risk] 999'
+      tags:
+        - Rischi
+      security: []
+    put:
+      summary: "Aggiorna un rischio\n\nAggiorna i campi di una configurazione di rischio esistente. Ogni modifica crea automaticamente una nuova versione."
+      operationId: aggiornaUnRischioAggiornaICampiDiUnaConfigurazioneDiRischioEsistenteOgniModificaCreaAutomaticamenteUnaNuovaVersione
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  id: 1
+                  uuid: 550e8400-e29b-41d4-a716-446655440000
+                  name: 'Rischio Rumore Aggiornato'
+                  description: null
+                  content_expectations: null
+                  output_structure: []
+                  prompt: null
+                  state: draft
+                  version: 2
+                  created_at: '2025-11-01T14:00:00Z'
+                  updated_at: '2025-11-02T09:00:00Z'
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  uuid:
+                    type: string
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                  name:
+                    type: string
+                    example: 'Rischio Rumore Aggiornato'
+                  description:
+                    type: string
+                    example: null
+                  content_expectations:
+                    type: string
+                    example: null
+                  output_structure:
+                    type: array
+                    example: []
+                  prompt:
+                    type: string
+                    example: null
+                  state:
+                    type: string
+                    example: draft
+                  version:
+                    type: integer
+                    example: 2
+                  created_at:
+                    type: string
+                    example: '2025-11-01T14:00:00Z'
+                  updated_at:
+                    type: string
+                    example: '2025-11-02T09:00:00Z'
+        422:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "{\n  \\\"errors\\\": {\n    \\\"name\\\": [\\\"The name field must be a string.\\\"]\\n\",\n  }\n}"
+      tags:
+        - Rischi
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                uuid:
+                  type: string
+                  description: 'UUID del rischio (opzionale).'
+                  example: 6ff8f7f6-1eb3-3525-be4a-3932c805afed
+                  nullable: true
+                name:
+                  type: string
+                  description: 'Nome del rischio.'
+                  example: architecto
+                  nullable: false
+                description:
+                  type: string
+                  description: 'Descrizione del rischio.'
+                  example: 'Eius et animi quos velit et.'
+                  nullable: true
+                content_expectations:
+                  type: string
+                  description: 'Aspettative del contenuto.'
+                  example: architecto
+                  nullable: true
+                output_structure:
+                  type: array
+                  description: 'Struttura dei campi da estrarre.'
+                  example:
+                    - architecto
+                  items:
+                    type: string
+                    nullable: true
+                prompt:
+                  type: string
+                  description: 'Prompt AI generato.'
+                  example: architecto
+                  nullable: true
+                state:
+                  type: string
+                  description: 'Stato del rischio (draft, published, archived).'
+                  example: architecto
+                  nullable: true
+      security: []
+    delete:
+      summary: "Elimina un rischio\n\nCancella definitivamente una configurazione di rischio dal sistema."
+      operationId: eliminaUnRischioCancellaDefinitivamenteUnaConfigurazioneDiRischioDalSistema
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: true
+                  message: 'Rischio eliminato con successo'
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 'Rischio eliminato con successo'
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'No query results for model [App\Models\Risk] 999'
+                properties:
+                  message:
+                    type: string
+                    example: 'No query results for model [App\Models\Risk] 999'
+      tags:
+        - Rischi
+      security: []
+    parameters:
+      -
+        in: path
+        name: id
+        description: "L'ID del rischio."
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/risks/{risk_id}/versions':
+    get:
+      summary: "Lista delle versioni di un rischio\n\nRestituisce tutte le versioni storiche della configurazione del rischio."
+      operationId: listaDelleVersioniDiUnRischioRestituisceTutteLeVersioniStoricheDellaConfigurazioneDelRischio
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "[\n  {\n    \"id\": 5,\n    \"risk_id\": 3,\n    \"version\": 1,\n    \"name\": \"Vecchio nome\",\n    \"description\": null,\n    \"content_expectations\": null,\n    \"output_structure\": [],\n    \"prompt\": null,\n    \"state\": \"draft\",\n    \"created_at\": \"2025-11-01T15:00:00Z\",\n    \"updated_at\": \"2025-11-01T15:00:00Z\"\n  },\n  …\n]"
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'No query results for model [App\Models\Risk] 999'
+                properties:
+                  message:
+                    type: string
+                    example: 'No query results for model [App\Models\Risk] 999'
+      tags:
+        - Rischi
+      security: []
+    parameters:
+      -
+        in: path
+        name: risk_id
+        description: 'The ID of the risk.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: id
+        description: 'ID del rischio.'
+        example: 3
+        required: true
+        schema:
+          type: integer
+  '/api/risks/{risk_id}/revert/{version}':
+    post:
+      summary: "Torna a una versione precedente\n\nPermette di ripristinare una configurazione di rischio a una versione storica specificata.\nAl ripristino viene automaticamente salvata la configurazione corrente come nuova versione."
+      operationId: tornaAUnaVersionePrecedentePermetteDiRipristinareUnaConfigurazioneDiRischioAUnaVersioneStoricaSpecificataAlRipristinoVieneAutomaticamenteSalvataLaConfigurazioneCorrenteComeNuovaVersione
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "{\n  \"id\": 3,\n  \"uuid\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"name\": \"Vecchio nome\",\n  \"description\": null,\n  …\n  \"version\": 4\n}"
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Version not found'
+                properties:
+                  message:
+                    type: string
+                    example: 'Version not found'
+      tags:
+        - Rischi
+      security: []
+    parameters:
+      -
+        in: path
+        name: risk_id
+        description: 'The ID of the risk.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: version
+        description: 'Numero di versione a cui tornare.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: id
+        description: 'ID del rischio.'
+        example: 3
+        required: true
+        schema:
+          type: integer

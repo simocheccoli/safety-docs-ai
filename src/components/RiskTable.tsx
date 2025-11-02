@@ -4,7 +4,7 @@ import { Edit, Trash2, TestTube } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { RiskType } from "@/types/risk";
-import { deleteRiskType } from "@/lib/riskStorage";
+import { deleteRiskType } from "@/lib/riskApi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -41,17 +41,29 @@ const statusConfig = {
 export function RiskTable({ risks, onRefresh }: RiskTableProps) {
   const navigate = useNavigate();
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId) {
-      deleteRiskType(deleteId);
-      window.dispatchEvent(new Event('riskTypesUpdated'));
-      setDeleteId(null);
-      onRefresh();
-      toast({
-        title: "Rischio eliminato",
-        description: "Il rischio è stato eliminato con successo.",
-      });
+      try {
+        setIsDeleting(true);
+        await deleteRiskType(deleteId);
+        window.dispatchEvent(new Event('riskTypesUpdated'));
+        setDeleteId(null);
+        onRefresh();
+        toast({
+          title: "Rischio eliminato",
+          description: "Il rischio è stato eliminato con successo.",
+        });
+      } catch (error) {
+        toast({
+          title: "Errore",
+          description: "Impossibile eliminare il rischio",
+          variant: "destructive",
+        });
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -72,6 +84,7 @@ export function RiskTable({ risks, onRefresh }: RiskTableProps) {
               <TableHead>Nome Rischio</TableHead>
               <TableHead>Descrizione</TableHead>
               <TableHead>Stato</TableHead>
+              <TableHead>Versione</TableHead>
               <TableHead>Ultima Modifica</TableHead>
               <TableHead className="text-right">Azioni</TableHead>
             </TableRow>
@@ -85,6 +98,9 @@ export function RiskTable({ risks, onRefresh }: RiskTableProps) {
                   <Badge variant="outline" className={statusConfig[risk.status].className}>
                     {statusConfig[risk.status].label}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary">v{risk.version}</Badge>
                 </TableCell>
                 <TableCell>
                   {format(new Date(risk.updatedAt), "dd/MM/yyyy HH:mm", { locale: it })}
@@ -129,8 +145,10 @@ export function RiskTable({ risks, onRefresh }: RiskTableProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annulla</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Elimina</AlertDialogAction>
+            <AlertDialogCancel disabled={isDeleting}>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? "Eliminazione..." : "Elimina"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
