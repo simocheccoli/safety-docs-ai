@@ -1,17 +1,13 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Save, Building2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Save } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileWithClassification } from "@/types/dvr";
 import { dvrApi } from "@/lib/dvrApi";
-import { companyApi } from "@/lib/companyApi";
-import { Company } from "@/types/company";
 import { toast } from "@/hooks/use-toast";
 import {
   Accordion,
@@ -22,22 +18,16 @@ import {
 
 interface FileReviewStepProps {
   files: FileWithClassification[];
+  dvrName: string;
+  companyId?: number;
   existingDvrId?: string;
   onComplete: (dvrId: string) => void;
   onBack: () => void;
 }
 
-export function FileReviewStep({ files, existingDvrId, onComplete, onBack }: FileReviewStepProps) {
+export function FileReviewStep({ files, dvrName, companyId, existingDvrId, onComplete, onBack }: FileReviewStepProps) {
   const [reviewedFiles, setReviewedFiles] = useState<FileWithClassification[]>(files);
-  const [dvrName, setDvrName] = useState<string>(`DVR ${new Date().toLocaleDateString('it-IT')}`);
-  const [companyId, setCompanyId] = useState<number | undefined>();
-  const [companies, setCompanies] = useState<Company[]>([]);
   const [saving, setSaving] = useState(false);
-
-  // Carica le aziende
-  useEffect(() => {
-    companyApi.getAll().then(setCompanies).catch(console.error);
-  }, []);
 
   const handleInclusionChange = (fileId: string, included: boolean) => {
     setReviewedFiles(prev => prev.map(f =>
@@ -56,15 +46,6 @@ export function FileReviewStep({ files, existingDvrId, onComplete, onBack }: Fil
   };
 
   const handleSaveAndComplete = async () => {
-    if (!dvrName.trim()) {
-      toast({
-        title: "Errore",
-        description: "Inserisci un nome per il DVR",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
       setSaving(true);
 
@@ -156,40 +137,6 @@ export function FileReviewStep({ files, existingDvrId, onComplete, onBack }: Fil
             Le decisioni prese qui hanno valore legale per la valutazione dei rischi.
           </AlertDescription>
         </Alert>
-
-        <div>
-          <Label htmlFor="dvr-name">Nome DVR</Label>
-          <Input
-            id="dvr-name"
-            value={dvrName}
-            onChange={(e) => setDvrName(e.target.value)}
-            placeholder="Inserisci nome DVR..."
-            className="mt-2"
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="company">Azienda</Label>
-          <Select 
-            value={companyId?.toString() || "none"} 
-            onValueChange={(value) => setCompanyId(value === "none" ? undefined : parseInt(value))}
-          >
-            <SelectTrigger id="company" className="mt-2">
-              <SelectValue placeholder="Seleziona un'azienda (opzionale)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Nessuna azienda</SelectItem>
-              {companies.map((company) => (
-                <SelectItem key={company.id} value={company.id.toString()}>
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    <span>{company.name}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
 
         <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
           <div className="text-center">

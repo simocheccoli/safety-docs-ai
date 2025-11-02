@@ -160,9 +160,12 @@ export default function DVRList() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   {dvr.company && (
-                    <div className="flex items-center gap-2 text-muted-foreground col-span-2">
-                      <Building2 className="h-4 w-4" />
-                      <span>Azienda: {dvr.company.name}</span>
+                    <div className="flex items-center gap-2 col-span-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                      <Building2 className="h-5 w-5 text-primary" />
+                      <div>
+                        <span className="text-xs text-muted-foreground">Azienda:</span>
+                        <span className="ml-2 font-semibold text-primary">{dvr.company.name}</span>
+                      </div>
                     </div>
                   )}
                   <div className="flex items-center gap-2 text-muted-foreground">

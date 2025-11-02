@@ -20,6 +20,8 @@ export default function DVRWizard() {
   const [files, setFiles] = useState<FileWithClassification[]>([]);
   const [apiKey, setApiKey] = useState<string>("");
   const [dvrId, setDvrId] = useState<string>(existingDvrId || "");
+  const [dvrName, setDvrName] = useState<string>("");
+  const [companyId, setCompanyId] = useState<number | undefined>();
 
   const steps = [
     { id: 'upload', label: 'Caricamento', icon: Upload },
@@ -30,7 +32,9 @@ export default function DVRWizard() {
 
   const currentStepIndex = steps.findIndex(s => s.id === currentStep);
 
-  const handleFilesSelected = (selectedFiles: File[]) => {
+  const handleFilesSelected = (selectedFiles: File[], name: string, companyId?: number) => {
+    setDvrName(name);
+    setCompanyId(companyId);
     const newFiles: FileWithClassification[] = selectedFiles.map(file => ({
       file,
       metadata: {
@@ -121,6 +125,8 @@ export default function DVRWizard() {
       {currentStep === 'review' && (
         <FileReviewStep 
           files={files}
+          dvrName={dvrName}
+          companyId={companyId}
           existingDvrId={existingDvrId || undefined}
           onComplete={handleReviewComplete}
           onBack={() => setCurrentStep('process')}

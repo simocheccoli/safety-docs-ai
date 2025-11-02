@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Save, FileCheck, AlertTriangle, FileEdit, ChevronDown } from "lucide-react";
+import { ArrowLeft, Plus, Save, FileCheck, AlertTriangle, FileEdit, ChevronDown, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -138,22 +138,30 @@ export default function DVRDetail() {
           <Button variant="ghost" size="icon" onClick={() => navigate('/dvr')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold">{dvr.nome}</h1>
-              <Badge className={statusColors[dvr.stato]}>
-                {statusLabels[dvr.stato]}
-              </Badge>
-              <Badge variant="outline">Revisione {dvr.numero_revisione}</Badge>
-            </div>
-            {dvr.descrizione && (
-              <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-                {dvr.descrizione}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <CardTitle>{dvr.nome}</CardTitle>
+                <Badge className={statusColors[dvr.stato]}>
+                  {statusLabels[dvr.stato]}
+                </Badge>
+                <Badge variant="outline">Revisione {dvr.numero_revisione}</Badge>
+              </div>
+              {dvr.company && (
+                <div className="flex items-center gap-2 mb-2 text-sm">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-primary">{dvr.company.name}</span>
+                </div>
+              )}
+              {dvr.descrizione && (
+                <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+                  {dvr.descrizione}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Ultima modifica: {new Date(dvr.data_ultima_modifica).toLocaleString('it-IT')}
               </p>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">
-              Ultima modifica: {new Date(dvr.data_ultima_modifica).toLocaleString('it-IT')}
-            </p>
+            </div>
           </div>
         </div>
         <div className="flex gap-2">
