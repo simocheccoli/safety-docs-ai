@@ -10,10 +10,14 @@ export const dvrApi = {
   /**
    * Crea un nuovo DVR con file
    */
-  createDVR: async (title: string, files: File[]): Promise<DVR> => {
+  createDVR: async (title: string, files: File[], companyId?: number): Promise<DVR> => {
     try {
       const formData = new FormData();
       formData.append('title', title);
+      
+      if (companyId) {
+        formData.append('company_id', companyId.toString());
+      }
       
       files.forEach(file => {
         formData.append('files[]', file);
@@ -84,15 +88,26 @@ export const dvrApi = {
    */
   updateDVR: async (id: string, data: Partial<DVR>): Promise<DVR> => {
     try {
+      const updatePayload: any = {};
+      
+      if (data.nome !== undefined) {
+        updatePayload.title = data.nome;
+      }
+      
+      if (data.stato !== undefined) {
+        updatePayload.status = mapStatusToBackend(data.stato);
+      }
+      
+      if (data.company_id !== undefined) {
+        updatePayload.company_id = data.company_id;
+      }
+      
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          title: data.nome,
-          status: mapStatusToBackend(data.stato),
-        }),
+        body: JSON.stringify(updatePayload),
       });
       
       if (!response.ok) {
@@ -348,6 +363,11 @@ function mapDVRFromBackend(backendDVR: any): DVR {
     data_creazione: backendDVR.created_at,
     data_ultima_modifica: backendDVR.updated_at,
     stato: mapStatusFromBackend(backendDVR.status),
+    company_id: backendDVR.company_id,
+    company: backendDVR.company ? {
+      id: backendDVR.company.id,
+      name: backendDVR.company.name,
+    } : undefined,
     created_by: backendDVR.created_by || '',
     updated_by: backendDVR.updated_by || '',
     files_count: backendDVR.files_count,

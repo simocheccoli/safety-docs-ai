@@ -9,6 +9,11 @@ export interface DVR {
   data_creazione: string;
   data_ultima_modifica: string;
   stato: DVRStatus;
+  company_id?: number; // FK to Company
+  company?: {
+    id: number;
+    name: string;
+  };
   created_by: string; // user_id
   updated_by: string; // user_id
 }

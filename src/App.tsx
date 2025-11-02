@@ -10,6 +10,7 @@ import SafetySheets from "./pages/SafetySheets";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Users from "./pages/Users";
+import Companies from "./pages/Companies";
 import RiskManagement from "./pages/RiskManagement";
 import RiskDetail from "./pages/RiskDetail";
 import DVRWizard from "./pages/DVRWizard";
@@ -45,6 +46,7 @@ const App = () => {
                           <Routes>
                             <Route path="/" element={<Dashboard />} />
             <Route path="/safety-sheets" element={<SafetySheets />} />
+            <Route path="/companies" element={<Companies />} />
               <Route path="/rischi" element={<RiskManagement />} />
               <Route path="/rischi/:id" element={<RiskDetail />} />
           <Route path="/dvr" element={<DVRList />} />

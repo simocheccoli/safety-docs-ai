@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, FileText, Calendar, User, Edit, Trash2 } from "lucide-react";
+import { Plus, FileText, Calendar, User, Edit, Trash2, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -159,6 +159,12 @@ export default function DVRList() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 text-sm">
+                  {dvr.company && (
+                    <div className="flex items-center gap-2 text-muted-foreground col-span-2">
+                      <Building2 className="h-4 w-4" />
+                      <span>Azienda: {dvr.company.name}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="h-4 w-4" />
                     <span>Creato: {new Date(dvr.data_creazione).toLocaleDateString('it-IT')}</span>
