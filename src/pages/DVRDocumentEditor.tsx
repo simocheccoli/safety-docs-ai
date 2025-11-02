@@ -32,7 +32,7 @@ export default function DVRDocumentEditor() {
     saving,
     regenerating,
     exporting,
-    docxPath,
+    downloadUrl,
     saveDocument,
     regenerateDocument,
     exportDocument,
@@ -79,7 +79,16 @@ export default function DVRDocumentEditor() {
   };
 
   useEffect(() => {
-    if (editorMode === 'superdoc' && superDocContainerRef.current && !superDocRef.current) {
+    if (editorMode === 'superdoc' && superDocContainerRef.current) {
+      // Se c'è già un'istanza, distruggi e ricrea con il nuovo documento
+      if (superDocRef.current) {
+        try {
+          superDocRef.current.destroy();
+        } catch (e) {
+          console.log('Cleanup SuperDoc:', e);
+        }
+        superDocRef.current = null;
+      }
       initializeSuperDoc();
     }
     
@@ -93,15 +102,13 @@ export default function DVRDocumentEditor() {
         superDocRef.current = null;
       }
     };
-  }, [editorMode, docxPath]);
+  }, [editorMode, downloadUrl]);
 
   const initializeSuperDoc = () => {
     try {
-      if (superDocContainerRef.current && !superDocRef.current) {
+      if (superDocContainerRef.current) {
         // Use the generated docx if available, otherwise use template
-        const documentPath = docxPath 
-          ? `${API_BASE_URL}/storage/${docxPath}`
-          : '/templates/dvr_template.docx';
+        const documentPath = downloadUrl || '/templates/dvr_template.docx';
         
         superDocRef.current = new SuperDoc({
           selector: '#superdoc-container',
@@ -114,7 +121,7 @@ export default function DVRDocumentEditor() {
             console.log('SuperDoc pronto', event);
             toast({
               title: "Editor Caricato",
-              description: docxPath ? "Documento caricato con successo" : "Template DVR caricato con successo",
+              description: downloadUrl ? "Documento caricato con successo" : "Template DVR caricato con successo",
             });
           },
           onEditorCreate: (event: any) => {

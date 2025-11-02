@@ -434,7 +434,7 @@ export const dvrApi = {
   /**
    * Rigenera il documento da template
    */
-  regenerateDocument: async (dvrId: string, template?: string): Promise<{ success: boolean; docx_path: string; html: string }> => {
+  regenerateDocument: async (dvrId: string, template?: string): Promise<{ success: boolean; document_path: string; download_url: string }> => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/document/generate`, {
         method: 'POST',

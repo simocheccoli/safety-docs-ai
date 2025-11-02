@@ -17,7 +17,7 @@ interface UseDvrDocumentReturn {
   regenerating: boolean;
   exporting: boolean;
   error: string | null;
-  docxPath: string | null;
+  downloadUrl: string | null;
   saveDocument: () => Promise<void>;
   regenerateDocument: (template?: string) => Promise<void>;
   exportDocument: (format: 'docx' | 'pdf') => Promise<void>;
@@ -25,7 +25,7 @@ interface UseDvrDocumentReturn {
 
 export function useDvrDocument({ dvrId, autoSaveDelay = 0 }: UseDvrDocumentOptions): UseDvrDocumentReturn {
   const [html, setHtml] = useState<string>('');
-  const [docxPath, setDocxPath] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -113,8 +113,7 @@ export function useDvrDocument({ dvrId, autoSaveDelay = 0 }: UseDvrDocumentOptio
       setRegenerating(true);
       setError(null);
       const response = await dvrApi.regenerateDocument(dvrId, template);
-      setHtml(response.html);
-      setDocxPath(response.docx_path);
+      setDownloadUrl(response.download_url);
       toast({
         title: 'Documento rigenerato',
         description: 'Il documento è stato rigenerato dal template',
@@ -179,7 +178,7 @@ export function useDvrDocument({ dvrId, autoSaveDelay = 0 }: UseDvrDocumentOptio
     regenerating,
     exporting,
     error,
-    docxPath,
+    downloadUrl,
     saveDocument,
     regenerateDocument,
     exportDocument,
