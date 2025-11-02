@@ -13,6 +13,7 @@ import { updateDVRFile } from "@/lib/dvrStorage";
 import { FileMetadata } from "@/types/dvr";
 import { toast } from "@/hooks/use-toast";
 import { VisualJSONEditor } from "./VisualJSONEditor";
+import { dvrApi } from "@/lib/dvrApi";
 
 interface FileDetailCardProps {
   file: FileMetadata;
@@ -43,23 +44,39 @@ export function FileDetailCard({ file, onUpdate }: FileDetailCardProps) {
     });
   };
 
-  const handleInclusionChange = (checked: boolean) => {
+  const handleInclusionChange = async (checked: boolean) => {
     setIncluded(checked);
-    updateDVRFile(file.file_id, {
-      inclusione_dvr: checked
-    });
-    onUpdate();
+    try {
+      await dvrApi.updateFile(file.dvr_id, file.file_id, {
+        inclusione_dvr: checked
+      });
+      onUpdate();
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: error instanceof Error ? error.message : "Impossibile aggiornare l'inclusione",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleNotesChange = () => {
-    updateDVRFile(file.file_id, {
-      note_rspp: notes
-    });
-    onUpdate();
-    toast({
-      title: "Note Salvate",
-      description: "Le note RSPP sono state aggiornate",
-    });
+  const handleNotesChange = async () => {
+    try {
+      await dvrApi.updateFile(file.dvr_id, file.file_id, {
+        note_rspp: notes
+      });
+      onUpdate();
+      toast({
+        title: "Note Salvate",
+        description: "Le note RSPP sono state aggiornate",
+      });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: error instanceof Error ? error.message : "Impossibile salvare le note",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusIcon = () => {

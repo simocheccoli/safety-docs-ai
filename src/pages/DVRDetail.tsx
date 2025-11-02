@@ -51,9 +51,9 @@ export default function DVRDetail() {
   };
 
   const handleFinalize = async () => {
-    if (!id) return;
+    if (!id || !dvr) return;
     try {
-      await dvrApi.changeStatus(id, 'FINALIZZATO');
+      await dvrApi.finalize(id, dvr.nome);
       loadDVR();
       toast({
         title: "DVR Finalizzato",
