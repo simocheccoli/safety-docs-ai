@@ -8,6 +8,25 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 
 export const dvrApi = {
   /**
+   * Recupera tutti i DVR
+   */
+  getDVRList: async (): Promise<DVR[]> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/dvrs`);
+      
+      if (!response.ok) {
+        throw new Error("Errore nel recupero della lista DVR");
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Errore getDVRList:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Recupera un DVR per ID
    */
   getDVR: async (id: string): Promise<DVR | null> => {

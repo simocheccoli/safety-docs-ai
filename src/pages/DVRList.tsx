@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { getDVRList, deleteDVR, getDVRFiles } from "@/lib/dvrStorage";
+import { dvrApi } from "@/lib/dvrApi";
 import { DVR } from "@/types/dvr";
 import { toast } from "@/hooks/use-toast";
 import { statusLabels, statusColors } from "@/components/dvr/DVRInfoEditor";
@@ -23,31 +23,53 @@ import { statusLabels, statusColors } from "@/components/dvr/DVRInfoEditor";
 export default function DVRList() {
   const navigate = useNavigate();
   const [dvrs, setDvrs] = useState<DVR[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadDVRs();
   }, []);
 
-  const loadDVRs = () => {
-    const allDvrs = getDVRList();
-    setDvrs(allDvrs);
+  const loadDVRs = async () => {
+    try {
+      setLoading(true);
+      const allDvrs = await dvrApi.getDVRList();
+      setDvrs(allDvrs);
+    } catch (error) {
+      console.error("Errore nel caricamento dei DVR:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare la lista DVR",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (dvrId: string) => {
-    deleteDVR(dvrId);
-    loadDVRs();
-    toast({
-      title: "DVR Eliminato",
-      description: "Il documento è stato rimosso con successo",
-    });
+  const handleDelete = async (dvrId: string) => {
+    try {
+      await dvrApi.deleteDVR(dvrId);
+      loadDVRs();
+      toast({
+        title: "DVR Eliminato",
+        description: "Il documento è stato rimosso con successo",
+      });
+    } catch (error) {
+      console.error("Errore nell'eliminazione:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il DVR",
+        variant: "destructive",
+      });
+    }
   };
 
-  const getFileCount = (dvrId: string) => {
-    return getDVRFiles(dvrId).length;
+  const getFileCount = (dvr: DVR) => {
+    return (dvr as any).files_count || 0;
   };
 
-  const getIncludedFileCount = (dvrId: string) => {
-    return getDVRFiles(dvrId).filter(f => f.inclusione_dvr).length;
+  const getIncludedFileCount = (dvr: DVR) => {
+    return (dvr as any).included_files_count || 0;
   };
 
   return (
@@ -63,7 +85,13 @@ export default function DVRList() {
         </Button>
       </div>
 
-      {dvrs.length === 0 ? (
+      {loading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <p className="text-muted-foreground">Caricamento...</p>
+          </CardContent>
+        </Card>
+      ) : dvrs.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FileText className="h-16 w-16 text-muted-foreground mb-4" />
@@ -92,7 +120,7 @@ export default function DVRList() {
                       <Badge variant="outline">Rev. {dvr.numero_revisione}</Badge>
                     </div>
                     <CardDescription>
-                      {dvr.descrizione || `${getIncludedFileCount(dvr.id)} file inclusi su ${getFileCount(dvr.id)} totali`}
+                      {dvr.descrizione || `${getIncludedFileCount(dvr)} file inclusi su ${getFileCount(dvr)} totali`}
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
