@@ -105,7 +105,7 @@ export function FileDetailCard({ file, onUpdate }: FileDetailCardProps) {
     }
   };
 
-  const displayOutput = file.output_json_modificato || file.output_json_completo;
+  const displayOutput = file.output_json_modificato || file.output_json_completo || {};
 
   return (
     <Card className={file.stato_elaborazione_ai === 'DA_ATTENZIONARE' ? 'border-yellow-500 border-2' : ''}>
