@@ -158,37 +158,47 @@ export default function DVRList() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="col-span-2 p-3 rounded-lg border-2 bg-card" style={{ borderColor: 'hsl(var(--primary))', backgroundColor: 'hsl(var(--primary) / 0.05)' }}>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5" style={{ color: 'hsl(var(--primary))' }} />
-                      <div>
-                        <span className="text-xs text-muted-foreground">Azienda:</span>
-                        {dvr.company ? (
-                          <span className="ml-2 font-semibold" style={{ color: 'hsl(var(--primary))' }}>
-                            {dvr.company.name}
-                          </span>
-                        ) : (
-                          <span className="ml-2 text-muted-foreground italic">Nessuna azienda associata</span>
-                        )}
+                <div className="space-y-4 text-sm">
+                  {dvr.company ? (
+                    <div className="p-4 rounded-lg border-2 bg-card" style={{ borderColor: 'hsl(var(--primary))', backgroundColor: 'hsl(var(--primary) / 0.05)' }}>
+                      <div className="flex items-start gap-3">
+                        <Building2 className="h-5 w-5 mt-0.5" style={{ color: 'hsl(var(--primary))' }} />
+                        <div className="flex-1 space-y-2">
+                          <div>
+                            <span className="font-semibold text-base" style={{ color: 'hsl(var(--primary))' }}>
+                              {dvr.company.name}
+                            </span>
+                          </div>
+                          {/* Additional company details can be added here when available */}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>Creato: {new Date(dvr.data_creazione).toLocaleDateString('it-IT')}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>Modificato: {new Date(dvr.data_ultima_modifica).toLocaleDateString('it-IT')}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <User className="h-4 w-4" />
-                    <span>Creato da: {dvr.created_by}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <User className="h-4 w-4" />
-                    <span>Modificato da: {dvr.updated_by}</span>
+                  ) : (
+                    <div className="p-4 rounded-lg border-2 bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-muted-foreground italic">Nessuna azienda associata</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>Creato: {new Date(dvr.data_creazione).toLocaleDateString('it-IT')}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>Modificato: {new Date(dvr.data_ultima_modifica).toLocaleDateString('it-IT')}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User className="h-4 w-4" />
+                      <span>Creato da: {dvr.created_by}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User className="h-4 w-4" />
+                      <span>Modificato da: {dvr.updated_by}</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>

@@ -6,6 +6,7 @@ export interface DVR {
   nome: string;
   descrizione?: string;
   numero_revisione: number;
+  revision_note?: string; // Nota della revisione corrente
   data_creazione: string;
   data_ultima_modifica: string;
   stato: DVRStatus;

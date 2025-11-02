@@ -110,7 +110,9 @@ export function DVRInfoEditor({ dvr, onUpdate }: DVRInfoEditorProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline"
+                className="w-full justify-start"
+        >
           <Edit className="h-4 w-4 mr-2" />
           Modifica Info
         </Button>
