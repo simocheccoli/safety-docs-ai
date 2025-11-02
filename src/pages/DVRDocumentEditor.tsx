@@ -12,6 +12,8 @@ import { useDvrDocument } from "@/hooks/useDvrDocument";
 import { SuperDoc } from "@harbour-enterprises/superdoc";
 import "@harbour-enterprises/superdoc/style.css";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
 export default function DVRDocumentEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -30,6 +32,7 @@ export default function DVRDocumentEditor() {
     saving,
     regenerating,
     exporting,
+    docxPath,
     saveDocument,
     regenerateDocument,
     exportDocument,
@@ -90,15 +93,20 @@ export default function DVRDocumentEditor() {
         superDocRef.current = null;
       }
     };
-  }, [editorMode]);
+  }, [editorMode, docxPath]);
 
   const initializeSuperDoc = () => {
     try {
       if (superDocContainerRef.current && !superDocRef.current) {
+        // Use the generated docx if available, otherwise use template
+        const documentPath = docxPath 
+          ? `${API_BASE_URL}/storage/${docxPath}`
+          : '/templates/dvr_template.docx';
+        
         superDocRef.current = new SuperDoc({
           selector: '#superdoc-container',
           toolbar: '#superdoc-toolbar',
-          document: '/templates/dvr_template.docx', // Template DVR
+          document: documentPath,
           documentMode: 'editing',
           pagination: true,
           rulers: true,
@@ -106,7 +114,7 @@ export default function DVRDocumentEditor() {
             console.log('SuperDoc pronto', event);
             toast({
               title: "Editor Caricato",
-              description: "Template DVR caricato con successo",
+              description: docxPath ? "Documento caricato con successo" : "Template DVR caricato con successo",
             });
           },
           onEditorCreate: (event: any) => {
