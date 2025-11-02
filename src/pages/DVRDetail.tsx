@@ -141,18 +141,22 @@ export default function DVRDetail() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <CardTitle>{dvr.nome}</CardTitle>
+                <h1 className="text-3xl font-bold">{dvr.nome}</h1>
                 <Badge className={statusColors[dvr.stato]}>
                   {statusLabels[dvr.stato]}
                 </Badge>
                 <Badge variant="outline">Revisione {dvr.numero_revisione}</Badge>
               </div>
-              {dvr.company && (
-                <div className="flex items-center gap-2 mb-2 text-sm">
-                  <Building2 className="h-4 w-4 text-primary" />
-                  <span className="font-medium text-primary">{dvr.company.name}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2 mb-2 p-2 rounded-md border-2" style={{ borderColor: 'hsl(var(--primary))', backgroundColor: 'hsl(var(--primary) / 0.05)' }}>
+                <Building2 className="h-5 w-5" style={{ color: 'hsl(var(--primary))' }} />
+                {dvr.company ? (
+                  <span className="font-semibold text-base" style={{ color: 'hsl(var(--primary))' }}>
+                    {dvr.company.name}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground italic">Nessuna azienda associata</span>
+                )}
+              </div>
               {dvr.descrizione && (
                 <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
                   {dvr.descrizione}

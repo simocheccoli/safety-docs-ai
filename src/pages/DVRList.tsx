@@ -159,15 +159,21 @@ export default function DVRList() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  {dvr.company && (
-                    <div className="flex items-center gap-2 col-span-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
-                      <Building2 className="h-5 w-5 text-primary" />
+                  <div className="col-span-2 p-3 rounded-lg border-2 bg-card" style={{ borderColor: 'hsl(var(--primary))', backgroundColor: 'hsl(var(--primary) / 0.05)' }}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5" style={{ color: 'hsl(var(--primary))' }} />
                       <div>
                         <span className="text-xs text-muted-foreground">Azienda:</span>
-                        <span className="ml-2 font-semibold text-primary">{dvr.company.name}</span>
+                        {dvr.company ? (
+                          <span className="ml-2 font-semibold" style={{ color: 'hsl(var(--primary))' }}>
+                            {dvr.company.name}
+                          </span>
+                        ) : (
+                          <span className="ml-2 text-muted-foreground italic">Nessuna azienda associata</span>
+                        )}
                       </div>
                     </div>
-                  )}
+                  </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="h-4 w-4" />
                     <span>Creato: {new Date(dvr.data_creazione).toLocaleDateString('it-IT')}</span>
