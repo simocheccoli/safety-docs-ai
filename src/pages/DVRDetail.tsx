@@ -148,60 +148,92 @@ export default function DVRDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dvr')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold">{dvr.nome}</h1>
-                <Badge className={statusColors[dvr.stato]}>
-                  {statusLabels[dvr.stato]}
-                </Badge>
-                <Badge variant="outline">Revisione {dvr.numero_revisione}</Badge>
-              </div>
-              {fullCompany ? (
-                <div className="mb-3 p-4 rounded-lg border-2" style={{ 
-                  borderColor: 'hsl(var(--primary))', 
-                  backgroundColor: 'hsl(var(--primary) / 0.05)' 
-                }}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3 flex-1">
-                      <Building2 className="h-5 w-5 mt-1" style={{ color: 'hsl(var(--primary))' }} />
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-base" style={{ color: 'hsl(var(--primary))' }}>
-                            {fullCompany.name}
-                          </span>
+      {/* Header con torna indietro */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/dvr')}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">{dvr.nome}</h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            Ultima modifica: {new Date(dvr.data_ultima_modifica).toLocaleString('it-IT')}
+          </p>
+        </div>
+      </div>
+
+      {/* Info principali e azioni */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Colonna sinistra: Info DVR e Azienda */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Badge stato e revisione */}
+          <div className="flex items-center gap-2">
+            <Badge className={statusColors[dvr.stato]}>
+              {statusLabels[dvr.stato]}
+            </Badge>
+            <Badge variant="outline">Revisione {dvr.numero_revisione}</Badge>
+          </div>
+
+          {/* Descrizione */}
+          {dvr.descrizione && (
+            <p className="text-sm text-muted-foreground">
+              {dvr.descrizione}
+            </p>
+          )}
+
+          {/* Nota revisione */}
+          {dvr.revision_note && (
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-start gap-2">
+                  <FileText className="h-4 w-4 mt-0.5 text-primary" />
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold mb-1 text-primary">
+                      Nota Revisione {dvr.numero_revisione}:
+                    </p>
+                    <p className="text-sm">
+                      {dvr.revision_note}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Azienda */}
+          {fullCompany ? (
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Building2 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <h3 className="font-semibold text-lg">{fullCompany.name}</h3>
+                      
+                      {(fullCompany.vat_number || fullCompany.tax_code) && (
+                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                          {fullCompany.vat_number && <span>P.IVA: {fullCompany.vat_number}</span>}
+                          {fullCompany.tax_code && <span>C.F.: {fullCompany.tax_code}</span>}
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          {fullCompany.vat_number && (
-                            <div className="text-muted-foreground">
-                              P.IVA: {fullCompany.vat_number}
-                            </div>
-                          )}
-                          {fullCompany.tax_code && (
-                            <div className="text-muted-foreground">
-                              C.F.: {fullCompany.tax_code}
-                            </div>
-                          )}
-                        </div>
-                        {fullCompany.address && (
-                          <div className="flex items-start gap-2 text-sm">
-                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                            <div>
-                              <div>{fullCompany.address}</div>
-                              {(fullCompany.zip || fullCompany.city) && (
-                                <div className="text-muted-foreground">
-                                  {fullCompany.zip} {fullCompany.city} {fullCompany.province}
-                                </div>
-                              )}
-                            </div>
+                      )}
+                      
+                      {fullCompany.address && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <div>
+                            <div>{fullCompany.address}</div>
+                            {(fullCompany.zip || fullCompany.city) && (
+                              <div className="text-muted-foreground">
+                                {fullCompany.zip} {fullCompany.city} {fullCompany.province}
+                              </div>
+                            )}
                           </div>
-                        )}
-                        <div className="flex flex-wrap gap-3 text-sm">
+                        </div>
+                      )}
+                      
+                      {(fullCompany.email || fullCompany.phone) && (
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
                           {fullCompany.email && (
                             <div className="flex items-center gap-1 text-muted-foreground">
                               <Mail className="h-3 w-3" />
@@ -215,85 +247,71 @@ export default function DVRDetail() {
                             </div>
                           )}
                         </div>
-                      </div>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => setShowCompanySheet(true)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ) : dvr.company ? (
-                <div className="mb-3 p-4 rounded-lg border-2" style={{ 
-                  borderColor: 'hsl(var(--primary))', 
-                  backgroundColor: 'hsl(var(--primary) / 0.05)' 
-                }}>
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5" style={{ color: 'hsl(var(--primary))' }} />
-                    <span className="font-semibold text-base" style={{ color: 'hsl(var(--primary))' }}>
-                      {dvr.company.name}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="mb-3 p-4 rounded-lg border-2 bg-muted/50">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-muted-foreground italic">Nessuna azienda associata</span>
-                  </div>
-                </div>
-              )}
-              {dvr.descrizione && (
-                <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-                  {dvr.descrizione}
-                </p>
-              )}
-              {dvr.revision_note && (
-                <div className="mt-3 p-3 rounded-lg border-2" style={{ 
-                  borderColor: 'hsl(var(--primary))', 
-                  backgroundColor: 'hsl(var(--primary) / 0.05)' 
-                }}>
-                  <div className="flex items-start gap-2">
-                    <FileText className="h-4 w-4 mt-0.5" style={{ color: 'hsl(var(--primary))' }} />
-                    <div className="flex-1">
-                      <p className="text-xs font-semibold mb-1" style={{ color: 'hsl(var(--primary))' }}>
-                        Nota Revisione {dvr.numero_revisione}:
-                      </p>
-                      <p className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>
-                        {dvr.revision_note}
-                      </p>
+                      )}
                     </div>
                   </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setShowCompanySheet(true)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
-              <p className="text-xs text-muted-foreground mt-1">
-                Ultima modifica: {new Date(dvr.data_ultima_modifica).toLocaleString('it-IT')}
-              </p>
-            </div>
-          </div>
+              </CardContent>
+            </Card>
+          ) : dvr.company ? (
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">{dvr.company.name}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Building2 className="h-5 w-5" />
+                  <span className="italic">Nessuna azienda associata</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
-        <div className="flex gap-2">
+
+        {/* Colonna destra: Azioni */}
+        <div className="space-y-3">
           <DVRInfoEditor dvr={dvr} onUpdate={loadDVR} />
-          <Button variant="outline" onClick={handleAddFiles}>
+          
+          <Button 
+            variant="outline" 
+            onClick={handleAddFiles}
+            className="w-full justify-start"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Aggiungi File
           </Button>
-          <Button variant="outline" onClick={() => navigate(`/dvr/${id}/document`)}>
+          
+          <Button 
+            variant="outline" 
+            onClick={() => navigate(`/dvr/${id}/document`)}
+            className="w-full justify-start"
+          >
             <FileEdit className="h-4 w-4 mr-2" />
             Modifica Documento
           </Button>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button disabled={isSaving}>
+              <Button disabled={isSaving} className="w-full justify-start">
                 <Save className="h-4 w-4 mr-2" />
                 Salva
-                <ChevronDown className="h-4 w-4 ml-2" />
+                <ChevronDown className="h-4 w-4 ml-auto" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem onClick={handleSave}>
                 <Save className="h-4 w-4 mr-2" />
                 Salva
@@ -304,8 +322,9 @@ export default function DVRDetail() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          
           {dvr.stato !== 'FINALIZZATO' && dvr.stato !== 'ARCHIVIATO' && (
-            <Button onClick={handleFinalize}>
+            <Button onClick={handleFinalize} className="w-full justify-start">
               <FileCheck className="h-4 w-4 mr-2" />
               Finalizza DVR
             </Button>
