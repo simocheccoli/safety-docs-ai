@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, FileText, Code, FileEdit } from "lucide-react";
+import { ArrowLeft, Save, FileText, Code, FileEdit, RefreshCw, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { dvrApi } from "@/lib/dvrApi";
 import { DVR } from "@/types/dvr";
 import { toast } from "@/hooks/use-toast";
 import { DocumentEditor } from "@/components/dvr/DocumentEditor";
+import { useDvrDocument } from "@/hooks/useDvrDocument";
 import { SuperDoc } from "@harbour-enterprises/superdoc";
 import "@harbour-enterprises/superdoc/style.css";
 
@@ -16,12 +16,27 @@ export default function DVRDocumentEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [dvr, setDvr] = useState<DVR | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [dvrLoading, setDvrLoading] = useState(true);
   const [documentTitle, setDocumentTitle] = useState("");
-  const [documentContent, setDocumentContent] = useState("");
   const [editorMode, setEditorMode] = useState<'html' | 'superdoc'>('html');
   const superDocRef = useRef<any>(null);
   const superDocContainerRef = useRef<HTMLDivElement>(null);
+
+  // Use the document hook for all document operations
+  const {
+    html,
+    setHtml,
+    loading: documentLoading,
+    saving,
+    regenerating,
+    exporting,
+    saveDocument,
+    regenerateDocument,
+    exportDocument,
+  } = useDvrDocument({
+    dvrId: id || '',
+    autoSaveDelay: 0, // Manual save only
+  });
 
   useEffect(() => {
     if (id) {
@@ -33,43 +48,12 @@ export default function DVRDocumentEditor() {
     if (!id) return;
     
     try {
-      setLoading(true);
+      setDvrLoading(true);
       const dvrData = await dvrApi.getDVR(id);
       
       if (dvrData) {
         setDvr(dvrData);
-        // Carica il contenuto del documento salvato o inizializza con template
-        const savedContent = localStorage.getItem(`dvr_document_${id}`);
-        const savedTitle = localStorage.getItem(`dvr_document_title_${id}`);
-        
-        if (savedContent) {
-          setDocumentContent(savedContent);
-          setDocumentTitle(savedTitle || dvrData.nome);
-        } else {
-          // Template iniziale
-          setDocumentTitle(dvrData.nome);
-          setDocumentContent(`
-            <h1>Documento di Valutazione dei Rischi</h1>
-            <h2>${dvrData.nome}</h2>
-            <p><strong>Revisione:</strong> ${dvrData.numero_revisione}</p>
-            <p><strong>Data di creazione:</strong> ${new Date(dvrData.data_creazione).toLocaleDateString('it-IT')}</p>
-            <br/>
-            <h2>1. Introduzione</h2>
-            <p>Il presente documento costituisce il Documento di Valutazione dei Rischi redatto in conformità al D.Lgs. 81/2008.</p>
-            <br/>
-            <h2>2. Dati Aziendali</h2>
-            <p>Inserire qui i dati dell'azienda...</p>
-            <br/>
-            <h2>3. Valutazione dei Rischi</h2>
-            <p>Descrizione della valutazione dei rischi effettuata...</p>
-            <br/>
-            <h2>4. Misure di Prevenzione e Protezione</h2>
-            <p>Elenco delle misure adottate...</p>
-            <br/>
-            <h2>5. Conclusioni</h2>
-            <p>Conclusioni della valutazione...</p>
-          `);
-        }
+        setDocumentTitle(dvrData.nome);
       } else {
         toast({
           title: "Errore",
@@ -87,7 +71,7 @@ export default function DVRDocumentEditor() {
       });
       navigate('/dvr');
     } finally {
-      setLoading(false);
+      setDvrLoading(false);
     }
   };
 
@@ -168,38 +152,26 @@ export default function DVRDocumentEditor() {
     }
   };
 
-  const handleSave = () => {
-    if (!id) return;
-    
-    // Salva il contenuto nel localStorage
-    localStorage.setItem(`dvr_document_${id}`, documentContent);
-    localStorage.setItem(`dvr_document_title_${id}`, documentTitle);
-    
-    toast({
-      title: "Documento Salvato",
-      description: "Le modifiche al documento sono state salvate con successo",
-    });
+  const handleRegenerate = async () => {
+    try {
+      await regenerateDocument();
+    } catch (error) {
+      console.error('Errore rigenerazione:', error);
+    }
   };
 
-  const handleExport = () => {
-    // Crea un blob con il contenuto HTML
-    const blob = new Blob([documentContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${documentTitle}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Documento Esportato",
-      description: "Il documento è stato scaricato come file HTML",
-    });
+  const handleExportAPI = async (format: 'docx' | 'pdf') => {
+    try {
+      await exportDocument(format);
+    } catch (error) {
+      console.error('Errore esportazione:', error);
+    }
   };
 
-  if (loading || !dvr) {
+  const isLoading = dvrLoading || documentLoading;
+  const isProcessing = saving || regenerating || exporting;
+
+  if (isLoading || !dvr) {
     return (
       <div className="flex items-center justify-center h-screen">
         <p className="text-muted-foreground">Caricamento...</p>
@@ -249,22 +221,47 @@ export default function DVRDocumentEditor() {
             
             {editorMode === 'html' ? (
               <>
-                <Button variant="outline" onClick={handleExport}>
-                  Esporta HTML
+                <Button 
+                  variant="outline" 
+                  onClick={handleRegenerate}
+                  disabled={isProcessing}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${regenerating ? 'animate-spin' : ''}`} />
+                  Rigenera da Template
                 </Button>
-                <Button onClick={handleSave}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Salva Documento
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleExportAPI('docx')}
+                  disabled={isProcessing}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Esporta DOCX
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleExportAPI('pdf')}
+                  disabled={isProcessing}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Esporta PDF
+                </Button>
+                <Button 
+                  onClick={saveDocument}
+                  disabled={isProcessing}
+                >
+                  <Save className={`h-4 w-4 mr-2 ${saving ? 'animate-pulse' : ''}`} />
+                  {saving ? 'Salvataggio...' : 'Salva Documento'}
                 </Button>
               </>
             ) : (
               <>
-                <Button variant="outline" onClick={handleExportDocx}>
+                <Button variant="outline" onClick={handleExportDocx} disabled={isProcessing}>
+                  <Download className="h-4 w-4 mr-2" />
                   Esporta DOCX
                 </Button>
-                <Button onClick={handleSave}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Salva Documento
+                <Button onClick={saveDocument} disabled={isProcessing}>
+                  <Save className={`h-4 w-4 mr-2 ${saving ? 'animate-pulse' : ''}`} />
+                  {saving ? 'Salvataggio...' : 'Salva Documento'}
                 </Button>
               </>
             )}
@@ -277,8 +274,8 @@ export default function DVRDocumentEditor() {
         <div className="h-full max-w-screen-2xl mx-auto p-4">
           {editorMode === 'html' ? (
             <DocumentEditor 
-              content={documentContent} 
-              onChange={setDocumentContent}
+              content={html} 
+              onChange={setHtml}
             />
           ) : (
             <div className="h-full flex flex-col space-y-2">

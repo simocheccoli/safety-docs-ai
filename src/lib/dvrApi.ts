@@ -386,6 +386,99 @@ export const dvrApi = {
       console.error("Errore getProcessingProgress:", error);
       throw error;
     }
+  },
+
+  /**
+   * Recupera il documento HTML di un DVR
+   */
+  getDocument: async (dvrId: string): Promise<{ html: string }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/document`);
+      
+      if (!response.ok) {
+        throw new Error("Errore nel recupero del documento");
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error("Errore getDocument:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Salva il documento HTML di un DVR
+   */
+  updateDocument: async (dvrId: string, html: string): Promise<{ success: boolean; html: string }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/document`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ html }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Errore nel salvataggio del documento");
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error("Errore updateDocument:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Rigenera il documento da template
+   */
+  regenerateDocument: async (dvrId: string, template?: string): Promise<{ success: boolean; docx_path: string; html: string }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/document/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(template ? { template } : {}),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Errore nella rigenerazione del documento");
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error("Errore regenerateDocument:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Esporta il documento in formato DOCX o PDF
+   */
+  exportDocument: async (dvrId: string, format: 'docx' | 'pdf'): Promise<{ success: boolean; path: string }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ format }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || `Errore nell'esportazione ${format.toUpperCase()}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error("Errore exportDocument:", error);
+      throw error;
+    }
   }
 };
 
