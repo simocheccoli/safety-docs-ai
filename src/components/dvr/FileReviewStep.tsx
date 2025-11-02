@@ -171,16 +171,14 @@ export function FileReviewStep({ files, existingDvrId, onComplete, onBack }: Fil
         <div>
           <Label htmlFor="company">Azienda</Label>
           <Select 
-            value={companyId?.toString()} 
-            onValueChange={(value) => setCompanyId(value ? parseInt(value) : undefined)}
+            value={companyId?.toString() || "none"} 
+            onValueChange={(value) => setCompanyId(value === "none" ? undefined : parseInt(value))}
           >
             <SelectTrigger id="company" className="mt-2">
-              <SelectValue placeholder="Seleziona un'azienda (opzionale)">
-                {companyId ? companies.find(c => c.id === companyId)?.name : "Seleziona un'azienda (opzionale)"}
-              </SelectValue>
+              <SelectValue placeholder="Seleziona un'azienda (opzionale)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Nessuna azienda</SelectItem>
+              <SelectItem value="none">Nessuna azienda</SelectItem>
               {companies.map((company) => (
                 <SelectItem key={company.id} value={company.id.toString()}>
                   <div className="flex items-center gap-2">
