@@ -16,6 +16,8 @@ export interface DVR {
   };
   created_by: string; // user_id
   updated_by: string; // user_id
+  files_count?: number; // Numero di file associati
+  files?: FileMetadata[]; // File associati (opzionale, restituito in alcune operazioni)
 }
 
 export interface DVRVersion {

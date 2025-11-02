@@ -56,36 +56,45 @@ export function FileReviewStep({ files, dvrName, companyId, existingDvrId, onCom
         companyId
       );
 
+      console.log("DVR creato con ID:", createdDvr.id);
+
       // Aggiorna le classificazioni e le inclusioni per ogni file
-      const fileUpdatePromises = reviewedFiles.map(async (fileObj, index) => {
-        // Il backend restituisce i file, dobbiamo trovare il file corrispondente
-        const backendFile = (createdDvr as any).files?.[index];
-        if (!backendFile) return;
+      if (createdDvr.files && createdDvr.files.length > 0) {
+        const fileUpdatePromises = reviewedFiles.map(async (fileObj, index) => {
+          // Usa i file mappati correttamente
+          const mappedFile = createdDvr.files?.[index];
+          if (!mappedFile || !mappedFile.file_id) return;
 
-        await dvrApi.updateFile(
-          createdDvr.id,
-          backendFile.id,
-          {
-            rischio_associato: fileObj.metadata.rischio_associato,
-            inclusione_dvr: fileObj.metadata.inclusione_dvr,
-            note_rspp: fileObj.metadata.note_rspp,
-          }
-        );
-      });
+          await dvrApi.updateFile(
+            createdDvr.id,
+            mappedFile.file_id,
+            {
+              rischio_associato: fileObj.metadata.rischio_associato,
+              inclusione_dvr: fileObj.metadata.inclusione_dvr,
+              note_rspp: fileObj.metadata.note_rspp,
+            }
+          );
+        });
 
-      await Promise.all(fileUpdatePromises);
+        await Promise.all(fileUpdatePromises);
+      }
 
       toast({
         title: "DVR Creato",
         description: `${reviewedFiles.length} documenti sono stati salvati con successo`,
       });
 
+      // Assicurati che l'ID sia presente prima del redirect
+      if (!createdDvr.id) {
+        throw new Error("ID del DVR non disponibile");
+      }
+
       onComplete(createdDvr.id);
     } catch (error) {
       console.error("Errore nel salvataggio:", error);
       toast({
         title: "Errore",
-        description: "Impossibile creare il DVR. Riprova.",
+        description: error instanceof Error ? error.message : "Impossibile creare il DVR. Riprova.",
         variant: "destructive",
       });
     } finally {
