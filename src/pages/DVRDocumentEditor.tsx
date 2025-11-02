@@ -104,16 +104,40 @@ export default function DVRDocumentEditor() {
     };
   }, [editorMode, downloadUrl]);
 
-  const initializeSuperDoc = () => {
+  const initializeSuperDoc = async () => {
     try {
       if (superDocContainerRef.current) {
-        // Use the generated docx if available, otherwise use template
-        const documentPath = downloadUrl || '/templates/dvr_template.docx';
+        let documentToLoad = '/templates/dvr_template.docx';
+        
+        // Se c'è un downloadUrl, scarica il file come blob
+        if (downloadUrl) {
+          try {
+            const response = await fetch(downloadUrl);
+            
+            // Verifica se la risposta è un file binario
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              // È JSON, non un file - usa il template
+              console.warn('Download URL ritorna JSON invece di DOCX, uso template');
+              toast({
+                title: "Avviso",
+                description: "Documento non ancora disponibile, carico il template",
+                variant: "destructive",
+              });
+            } else if (response.ok) {
+              // È un file binario - crea blob URL
+              const blob = await response.blob();
+              documentToLoad = URL.createObjectURL(blob);
+            }
+          } catch (error) {
+            console.error('Errore nel download del documento:', error);
+          }
+        }
         
         superDocRef.current = new SuperDoc({
           selector: '#superdoc-container',
           toolbar: '#superdoc-toolbar',
-          document: documentPath,
+          document: documentToLoad,
           documentMode: 'editing',
           pagination: true,
           rulers: true,
@@ -121,11 +145,21 @@ export default function DVRDocumentEditor() {
             console.log('SuperDoc pronto', event);
             toast({
               title: "Editor Caricato",
-              description: downloadUrl ? "Documento caricato con successo" : "Template DVR caricato con successo",
+              description: downloadUrl && documentToLoad !== '/templates/dvr_template.docx' 
+                ? "Documento caricato con successo" 
+                : "Template DVR caricato con successo",
             });
           },
           onEditorCreate: (event: any) => {
             console.log('Editor SuperDoc creato', event);
+          },
+          onError: (error: any) => {
+            console.error('SuperDoc error:', error);
+            toast({
+              title: "Errore Editor",
+              description: "Impossibile caricare il documento nell'editor",
+              variant: "destructive",
+            });
           }
         });
       }
