@@ -1,15 +1,27 @@
-import { useState } from "react";
-import { Upload, FileText, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Upload, FileText, X, Building2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { companyApi } from "@/lib/companyApi";
+import { Company } from "@/types/company";
 
 interface FileUploadStepProps {
-  onFilesSelected: (files: File[]) => void;
+  onFilesSelected: (files: File[], dvrName: string, companyId?: number) => void;
 }
 
 export function FileUploadStep({ onFilesSelected }: FileUploadStepProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [dvrName, setDvrName] = useState<string>(`DVR ${new Date().toLocaleDateString('it-IT')}`);
+  const [companyId, setCompanyId] = useState<number | undefined>();
+  const [companies, setCompanies] = useState<Company[]>([]);
+
+  useEffect(() => {
+    companyApi.getAll().then(setCompanies).catch(console.error);
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -23,8 +35,8 @@ export function FileUploadStep({ onFilesSelected }: FileUploadStepProps) {
   };
 
   const handleContinue = () => {
-    if (selectedFiles.length > 0) {
-      onFilesSelected(selectedFiles);
+    if (selectedFiles.length > 0 && dvrName.trim()) {
+      onFilesSelected(selectedFiles, dvrName, companyId);
     }
   };
 
@@ -51,6 +63,42 @@ export function FileUploadStep({ onFilesSelected }: FileUploadStepProps) {
             Dimensione massima per file: 20MB
           </AlertDescription>
         </Alert>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="dvr-name">Nome DVR *</Label>
+            <Input
+              id="dvr-name"
+              value={dvrName}
+              onChange={(e) => setDvrName(e.target.value)}
+              placeholder="Inserisci il nome del DVR"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="company">Azienda</Label>
+            <Select 
+              value={companyId?.toString() || "none"} 
+              onValueChange={(value) => setCompanyId(value === "none" ? undefined : parseInt(value))}
+            >
+              <SelectTrigger id="company">
+                <SelectValue placeholder="Seleziona un'azienda (opzionale)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nessuna azienda</SelectItem>
+                {companies.map((company) => (
+                  <SelectItem key={company.id} value={company.id.toString()}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      <span>{company.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
         <div className="border-2 border-dashed rounded-lg p-12 text-center">
           <input
@@ -99,7 +147,7 @@ export function FileUploadStep({ onFilesSelected }: FileUploadStepProps) {
         <div className="flex justify-end gap-3">
           <Button
             onClick={handleContinue}
-            disabled={selectedFiles.length === 0}
+            disabled={selectedFiles.length === 0 || !dvrName.trim()}
             size="lg"
           >
             Continua alla Classificazione

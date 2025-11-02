@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DVR, DVRStatus } from "@/types/dvr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Edit, Save } from "lucide-react";
+import { Edit, Save, Building2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { dvrApi } from "@/lib/dvrApi";
+import { companyApi } from "@/lib/companyApi";
+import { Company } from "@/types/company";
 import { z } from "zod";
 
 interface DVRInfoEditorProps {
@@ -46,7 +48,16 @@ export function DVRInfoEditor({ dvr, onUpdate }: DVRInfoEditorProps) {
   const [nome, setNome] = useState(dvr.nome);
   const [descrizione, setDescrizione] = useState(dvr.descrizione || "");
   const [stato, setStato] = useState<DVRStatus>(dvr.stato);
+  const [companyId, setCompanyId] = useState<number | undefined>(dvr.company_id);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  // Carica le aziende quando il dialog si apre
+  useEffect(() => {
+    if (isOpen) {
+      companyApi.getAll().then(setCompanies).catch(console.error);
+    }
+  }, [isOpen]);
 
   const handleSave = async () => {
     try {
@@ -64,6 +75,7 @@ export function DVRInfoEditor({ dvr, onUpdate }: DVRInfoEditorProps) {
         nome: validated.nome,
         descrizione: validated.descrizione,
         stato: validated.stato,
+        company_id: companyId,
         updated_by: 'current_user'
       });
 
@@ -164,6 +176,29 @@ export function DVRInfoEditor({ dvr, onUpdate }: DVRInfoEditorProps) {
             {errors.stato && (
               <p className="text-sm text-red-500">{errors.stato}</p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="company">Azienda</Label>
+            <Select 
+              value={companyId?.toString() || "none"} 
+              onValueChange={(value) => setCompanyId(value === "none" ? undefined : parseInt(value))}
+            >
+              <SelectTrigger id="company">
+                <SelectValue placeholder="Seleziona un'azienda (opzionale)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nessuna azienda</SelectItem>
+                {companies.map((company) => (
+                  <SelectItem key={company.id} value={company.id.toString()}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      <span>{company.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

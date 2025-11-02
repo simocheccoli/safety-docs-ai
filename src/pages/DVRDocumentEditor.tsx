@@ -1,23 +1,41 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, FileText } from "lucide-react";
+import { ArrowLeft, Save, FileText, Code, FileEdit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getDVRById } from "@/lib/dvrStorage";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { dvrApi } from "@/lib/dvrApi";
+import { DVR } from "@/types/dvr";
 import { toast } from "@/hooks/use-toast";
 import { DocumentEditor } from "@/components/dvr/DocumentEditor";
+import { SuperDoc } from "@harbour-enterprises/superdoc";
+import "@harbour-enterprises/superdoc/style.css";
 
 export default function DVRDocumentEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [dvr, setDvr] = useState<any>(null);
+  const [dvr, setDvr] = useState<DVR | null>(null);
+  const [loading, setLoading] = useState(true);
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentContent, setDocumentContent] = useState("");
+  const [editorMode, setEditorMode] = useState<'html' | 'superdoc'>('html');
+  const superDocRef = useRef<any>(null);
+  const superDocContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (id) {
-      const dvrData = getDVRById(id);
+      loadDVR();
+    }
+  }, [id]);
+
+  const loadDVR = async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      const dvrData = await dvrApi.getDVR(id);
+      
       if (dvrData) {
         setDvr(dvrData);
         // Carica il contenuto del documento salvato o inizializza con template
@@ -52,9 +70,103 @@ export default function DVRDocumentEditor() {
             <p>Conclusioni della valutazione...</p>
           `);
         }
+      } else {
+        toast({
+          title: "Errore",
+          description: "DVR non trovato",
+          variant: "destructive",
+        });
+        navigate('/dvr');
       }
+    } catch (error) {
+      console.error("Errore caricamento DVR:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare il DVR",
+        variant: "destructive",
+      });
+      navigate('/dvr');
+    } finally {
+      setLoading(false);
     }
-  }, [id]);
+  };
+
+  useEffect(() => {
+    if (editorMode === 'superdoc' && superDocContainerRef.current && !superDocRef.current) {
+      initializeSuperDoc();
+    }
+    
+    return () => {
+      if (superDocRef.current) {
+        try {
+          superDocRef.current.destroy();
+        } catch (e) {
+          console.log('Cleanup SuperDoc:', e);
+        }
+        superDocRef.current = null;
+      }
+    };
+  }, [editorMode]);
+
+  const initializeSuperDoc = () => {
+    try {
+      if (superDocContainerRef.current && !superDocRef.current) {
+        superDocRef.current = new SuperDoc({
+          selector: '#superdoc-container',
+          toolbar: '#superdoc-toolbar',
+          document: '/templates/dvr_template.docx', // Template DVR
+          documentMode: 'editing',
+          pagination: true,
+          rulers: true,
+          onReady: (event: any) => {
+            console.log('SuperDoc pronto', event);
+            toast({
+              title: "Editor Caricato",
+              description: "Template DVR caricato con successo",
+            });
+          },
+          onEditorCreate: (event: any) => {
+            console.log('Editor SuperDoc creato', event);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Errore inizializzazione SuperDoc:', error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare l'editor SuperDoc",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportDocx = async () => {
+    if (!superDocRef.current) return;
+    
+    try {
+      const blob = await superDocRef.current.exportAsDocx();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${documentTitle}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Documento Esportato",
+        description: "Il documento è stato scaricato come file DOCX",
+      });
+    } catch (error) {
+      console.error('Errore esportazione DOCX:', error);
+      toast({
+        title: "Errore",
+        description: "Impossibile esportare il documento",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSave = () => {
     if (!id) return;
@@ -87,7 +199,7 @@ export default function DVRDocumentEditor() {
     });
   };
 
-  if (!dvr) {
+  if (loading || !dvr) {
     return (
       <div className="flex items-center justify-center h-screen">
         <p className="text-muted-foreground">Caricamento...</p>
@@ -122,13 +234,40 @@ export default function DVRDocumentEditor() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExport}>
-              Esporta HTML
-            </Button>
-            <Button onClick={handleSave}>
-              <Save className="h-4 w-4 mr-2" />
-              Salva Documento
-            </Button>
+            <Tabs value={editorMode} onValueChange={(v) => setEditorMode(v as 'html' | 'superdoc')}>
+              <TabsList>
+                <TabsTrigger value="html" className="flex items-center gap-2">
+                  <Code className="h-4 w-4" />
+                  Editor HTML
+                </TabsTrigger>
+                <TabsTrigger value="superdoc" className="flex items-center gap-2">
+                  <FileEdit className="h-4 w-4" />
+                  Editor DOCX
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            {editorMode === 'html' ? (
+              <>
+                <Button variant="outline" onClick={handleExport}>
+                  Esporta HTML
+                </Button>
+                <Button onClick={handleSave}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salva Documento
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={handleExportDocx}>
+                  Esporta DOCX
+                </Button>
+                <Button onClick={handleSave}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salva Documento
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -136,10 +275,21 @@ export default function DVRDocumentEditor() {
       {/* Editor */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full max-w-screen-2xl mx-auto p-4">
-          <DocumentEditor 
-            content={documentContent} 
-            onChange={setDocumentContent}
-          />
+          {editorMode === 'html' ? (
+            <DocumentEditor 
+              content={documentContent} 
+              onChange={setDocumentContent}
+            />
+          ) : (
+            <div className="h-full flex flex-col space-y-2">
+              <div id="superdoc-toolbar" className="border rounded-lg p-2 bg-background"></div>
+              <div 
+                id="superdoc-container" 
+                ref={superDocContainerRef}
+                className="flex-1 border rounded-lg overflow-auto bg-background"
+              ></div>
+            </div>
+          )}
         </div>
       </div>
     </div>

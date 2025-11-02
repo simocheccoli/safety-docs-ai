@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Save } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileWithClassification } from "@/types/dvr";
@@ -19,14 +18,15 @@ import {
 
 interface FileReviewStepProps {
   files: FileWithClassification[];
+  dvrName: string;
+  companyId?: number;
   existingDvrId?: string;
   onComplete: (dvrId: string) => void;
   onBack: () => void;
 }
 
-export function FileReviewStep({ files, existingDvrId, onComplete, onBack }: FileReviewStepProps) {
+export function FileReviewStep({ files, dvrName, companyId, existingDvrId, onComplete, onBack }: FileReviewStepProps) {
   const [reviewedFiles, setReviewedFiles] = useState<FileWithClassification[]>(files);
-  const [dvrName, setDvrName] = useState<string>(`DVR ${new Date().toLocaleDateString('it-IT')}`);
   const [saving, setSaving] = useState(false);
 
   const handleInclusionChange = (fileId: string, included: boolean) => {
@@ -46,22 +46,14 @@ export function FileReviewStep({ files, existingDvrId, onComplete, onBack }: Fil
   };
 
   const handleSaveAndComplete = async () => {
-    if (!dvrName.trim()) {
-      toast({
-        title: "Errore",
-        description: "Inserisci un nome per il DVR",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
       setSaving(true);
 
       // Crea il DVR con i file tramite API
       const createdDvr = await dvrApi.createDVR(
         dvrName,
-        reviewedFiles.map(f => f.file)
+        reviewedFiles.map(f => f.file),
+        companyId
       );
 
       // Aggiorna le classificazioni e le inclusioni per ogni file
@@ -145,17 +137,6 @@ export function FileReviewStep({ files, existingDvrId, onComplete, onBack }: Fil
             Le decisioni prese qui hanno valore legale per la valutazione dei rischi.
           </AlertDescription>
         </Alert>
-
-        <div>
-          <Label htmlFor="dvr-name">Nome DVR</Label>
-          <Input
-            id="dvr-name"
-            value={dvrName}
-            onChange={(e) => setDvrName(e.target.value)}
-            placeholder="Inserisci nome DVR..."
-            className="mt-2"
-          />
-        </div>
 
         <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
           <div className="text-center">

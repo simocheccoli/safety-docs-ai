@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, FileText, Calendar, User, Edit, Trash2 } from "lucide-react";
+import { Plus, FileText, Calendar, User, Edit, Trash2, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -159,6 +159,21 @@ export default function DVRList() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="col-span-2 p-3 rounded-lg border-2 bg-card" style={{ borderColor: 'hsl(var(--primary))', backgroundColor: 'hsl(var(--primary) / 0.05)' }}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5" style={{ color: 'hsl(var(--primary))' }} />
+                      <div>
+                        <span className="text-xs text-muted-foreground">Azienda:</span>
+                        {dvr.company ? (
+                          <span className="ml-2 font-semibold" style={{ color: 'hsl(var(--primary))' }}>
+                            {dvr.company.name}
+                          </span>
+                        ) : (
+                          <span className="ml-2 text-muted-foreground italic">Nessuna azienda associata</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="h-4 w-4" />
                     <span>Creato: {new Date(dvr.data_creazione).toLocaleDateString('it-IT')}</span>
