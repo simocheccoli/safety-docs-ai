@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { FileWithClassification, ElaborationStatus } from "@/types/dvr";
-import { getRiskTypeById } from "@/lib/riskStorage";
+import { getRiskTypeById } from "@/lib/riskApi";
 import { toast } from "@/hooks/use-toast";
 import OpenAI from "openai";
 import { extractText } from "unpdf";
@@ -133,7 +133,7 @@ export function FileProcessingStep({ files, apiKey, setApiKey, onComplete, onBac
         setProcessedFiles([...updatedFiles]);
 
         // Carica il rischio associato
-        const risk = getRiskTypeById(fileObj.metadata.rischio_associato!);
+        const risk = await getRiskTypeById(fileObj.metadata.rischio_associato!);
         if (!risk) {
           throw new Error("Rischio non trovato");
         }

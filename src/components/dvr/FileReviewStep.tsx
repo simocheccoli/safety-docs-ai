@@ -49,43 +49,62 @@ export function FileReviewStep({ files, dvrName, companyId, existingDvrId, onCom
     try {
       setSaving(true);
 
-      // Crea il DVR con i file tramite API
-      const createdDvr = await dvrApi.createDVR(
-        dvrName,
-        reviewedFiles.map(f => f.file),
-        companyId
-      );
+      let resultDvr;
+
+      if (existingDvrId) {
+        // Aggiungi file a un DVR esistente
+        resultDvr = await dvrApi.addFilesToDVR(
+          existingDvrId,
+          reviewedFiles.map(f => f.file)
+        );
+        console.log("File aggiunti al DVR esistente con ID:", resultDvr.id);
+      } else {
+        // Crea un nuovo DVR con i file
+        resultDvr = await dvrApi.createDVR(
+          dvrName,
+          reviewedFiles.map(f => f.file),
+          companyId
+        );
+        console.log("DVR creato con ID:", resultDvr.id);
+      }
 
       // Aggiorna le classificazioni e le inclusioni per ogni file
-      const fileUpdatePromises = reviewedFiles.map(async (fileObj, index) => {
-        // Il backend restituisce i file, dobbiamo trovare il file corrispondente
-        const backendFile = (createdDvr as any).files?.[index];
-        if (!backendFile) return;
+      if (resultDvr.files && resultDvr.files.length > 0) {
+        const fileUpdatePromises = reviewedFiles.map(async (fileObj, index) => {
+          // Usa i file mappati correttamente
+          const mappedFile = resultDvr.files?.[index];
+          if (!mappedFile || !mappedFile.file_id) return;
 
-        await dvrApi.updateFile(
-          createdDvr.id,
-          backendFile.id,
-          {
-            rischio_associato: fileObj.metadata.rischio_associato,
-            inclusione_dvr: fileObj.metadata.inclusione_dvr,
-            note_rspp: fileObj.metadata.note_rspp,
-          }
-        );
-      });
+          await dvrApi.updateFile(
+            resultDvr.id,
+            mappedFile.file_id,
+            {
+              rischio_associato: fileObj.metadata.rischio_associato,
+              inclusione_dvr: fileObj.metadata.inclusione_dvr,
+              note_rspp: fileObj.metadata.note_rspp,
+            }
+          );
+        });
 
-      await Promise.all(fileUpdatePromises);
+        await Promise.all(fileUpdatePromises);
+      }
 
       toast({
-        title: "DVR Creato",
+        title: existingDvrId ? "File Aggiunti" : "DVR Creato",
         description: `${reviewedFiles.length} documenti sono stati salvati con successo`,
       });
 
-      onComplete(createdDvr.id);
+      // Assicurati che l'ID sia presente prima del redirect
+      if (!resultDvr.id) {
+        throw new Error("ID del DVR non disponibile");
+      }
+
+      onComplete(resultDvr.id);
     } catch (error) {
       console.error("Errore nel salvataggio:", error);
       toast({
         title: "Errore",
-        description: "Impossibile creare il DVR. Riprova.",
+        description: error instanceof Error ? error.message : existingDvrId ? "Impossibile aggiungere i file. Riprova." : "Impossibile creare il DVR. Riprova.",
         variant: "destructive",
       });
     } finally {

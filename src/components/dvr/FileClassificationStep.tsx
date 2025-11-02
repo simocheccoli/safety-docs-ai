@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileWithClassification } from "@/types/dvr";
-import { getRiskTypes } from "@/lib/riskStorage";
+import { getRiskTypes } from "@/lib/riskApi";
 import { RiskType } from "@/types/risk";
 import { toast } from "@/hooks/use-toast";
 
@@ -19,10 +19,30 @@ interface FileClassificationStepProps {
 export function FileClassificationStep({ files, onComplete, onBack }: FileClassificationStepProps) {
   const [classifiedFiles, setClassifiedFiles] = useState<FileWithClassification[]>(files);
   const [risks, setRisks] = useState<RiskType[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadedRisks = getRiskTypes();
-    setRisks(loadedRisks);
+    const loadRisks = async () => {
+      try {
+        setLoading(true);
+        const allRisks = await getRiskTypes();
+        // Filtra solo i rischi con status 'validated' o 'active'
+        const filteredRisks = allRisks.filter(
+          risk => risk.status === 'validated' || risk.status === 'active'
+        );
+        setRisks(filteredRisks);
+      } catch (error) {
+        console.error('Error loading risks:', error);
+        toast({
+          title: "Errore",
+          description: "Impossibile caricare le categorie di rischio",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadRisks();
   }, []);
 
   const handleRiskChange = (fileId: string, riskId: string) => {
@@ -71,8 +91,19 @@ export function FileClassificationStep({ files, onComplete, onBack }: FileClassi
           </AlertDescription>
         </Alert>
 
-        <div className="space-y-4">
-          {classifiedFiles.map((fileObj) => (
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Caricamento categorie di rischio...
+          </div>
+        ) : risks.length === 0 ? (
+          <Alert variant="destructive">
+            <AlertDescription>
+              Nessuna categoria di rischio disponibile. Assicurati che ci siano rischi con stato 'validated' o 'active'.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <div className="space-y-4">
+            {classifiedFiles.map((fileObj) => (
             <div key={fileObj.metadata.file_id} className="p-4 border rounded-lg space-y-3">
               <div className="flex items-start gap-3">
                 <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -98,15 +129,16 @@ export function FileClassificationStep({ files, onComplete, onBack }: FileClassi
                   <SelectContent>
                     {risks.map((risk) => (
                       <SelectItem key={risk.id} value={risk.id}>
-                        {risk.name} - {risk.status}
+                        {risk.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         <div className="flex justify-between gap-3">
           <Button variant="outline" onClick={onBack}>

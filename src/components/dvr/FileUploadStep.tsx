@@ -11,9 +11,10 @@ import { Company } from "@/types/company";
 
 interface FileUploadStepProps {
   onFilesSelected: (files: File[], dvrName: string, companyId?: number) => void;
+  existingDvrId?: string;
 }
 
-export function FileUploadStep({ onFilesSelected }: FileUploadStepProps) {
+export function FileUploadStep({ onFilesSelected, existingDvrId }: FileUploadStepProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [dvrName, setDvrName] = useState<string>(`DVR ${new Date().toLocaleDateString('it-IT')}`);
   const [companyId, setCompanyId] = useState<number | undefined>();
@@ -53,7 +54,9 @@ export function FileUploadStep({ onFilesSelected }: FileUploadStepProps) {
       <CardHeader>
         <CardTitle>Caricamento Documenti</CardTitle>
         <CardDescription>
-          Seleziona i documenti da analizzare per la creazione del DVR
+          {existingDvrId 
+            ? "Aggiungi nuovi documenti al DVR esistente" 
+            : "Seleziona i documenti da analizzare per la creazione del DVR"}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -64,41 +67,43 @@ export function FileUploadStep({ onFilesSelected }: FileUploadStepProps) {
           </AlertDescription>
         </Alert>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="dvr-name">Nome DVR *</Label>
-            <Input
-              id="dvr-name"
-              value={dvrName}
-              onChange={(e) => setDvrName(e.target.value)}
-              placeholder="Inserisci il nome del DVR"
-              required
-            />
-          </div>
+        {!existingDvrId && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="dvr-name">Nome DVR *</Label>
+              <Input
+                id="dvr-name"
+                value={dvrName}
+                onChange={(e) => setDvrName(e.target.value)}
+                placeholder="Inserisci il nome del DVR"
+                required
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="company">Azienda</Label>
-            <Select 
-              value={companyId?.toString() || "none"} 
-              onValueChange={(value) => setCompanyId(value === "none" ? undefined : parseInt(value))}
-            >
-              <SelectTrigger id="company">
-                <SelectValue placeholder="Seleziona un'azienda (opzionale)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nessuna azienda</SelectItem>
-                {companies.map((company) => (
-                  <SelectItem key={company.id} value={company.id.toString()}>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      <span>{company.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Label htmlFor="company">Azienda</Label>
+              <Select 
+                value={companyId?.toString() || "none"} 
+                onValueChange={(value) => setCompanyId(value === "none" ? undefined : parseInt(value))}
+              >
+                <SelectTrigger id="company">
+                  <SelectValue placeholder="Seleziona un'azienda (opzionale)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nessuna azienda</SelectItem>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id.toString()}>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        <span>{company.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="border-2 border-dashed rounded-lg p-12 text-center">
           <input
@@ -147,7 +152,7 @@ export function FileUploadStep({ onFilesSelected }: FileUploadStepProps) {
         <div className="flex justify-end gap-3">
           <Button
             onClick={handleContinue}
-            disabled={selectedFiles.length === 0 || !dvrName.trim()}
+            disabled={selectedFiles.length === 0 || (!existingDvrId && !dvrName.trim())}
             size="lg"
           >
             Continua alla Classificazione

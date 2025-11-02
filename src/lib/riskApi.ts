@@ -6,42 +6,20 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 interface BackendRisk {
   id: number;
   uuid: string;
+  code?: string;
   name: string;
   description: string | null;
   content_expectations: string | null;
   output_structure: any[];
   prompt: string | null;
-  state: 'draft' | 'published' | 'archived';
+  status: 'draft' | 'validated' | 'active';
   version: number;
   created_at: string;
   updated_at: string;
 }
 
-// Map backend status to frontend status
-const mapBackendStatus = (state: string): 'draft' | 'validated' | 'active' => {
-  switch (state) {
-    case 'published':
-      return 'validated';
-    case 'archived':
-      return 'active';
-    case 'draft':
-    default:
-      return 'draft';
-  }
-};
-
-// Map frontend status to backend state
-const mapFrontendStatus = (status: string): 'draft' | 'published' | 'archived' => {
-  switch (status) {
-    case 'validated':
-      return 'published';
-    case 'active':
-      return 'archived';
-    case 'draft':
-    default:
-      return 'draft';
-  }
-};
+// Backend and frontend use the same status values now
+// No mapping needed anymore
 
 // Convert backend risk to frontend format
 const mapBackendRiskToFrontend = (backendRisk: BackendRisk): RiskType => {
@@ -50,7 +28,7 @@ const mapBackendRiskToFrontend = (backendRisk: BackendRisk): RiskType => {
     uuid: backendRisk.uuid,
     name: backendRisk.name,
     description: backendRisk.description || '',
-    status: mapBackendStatus(backendRisk.state),
+    status: backendRisk.status,
     inputExpectations: backendRisk.content_expectations || '',
     outputStructure: Array.isArray(backendRisk.output_structure) 
       ? backendRisk.output_structure as OutputField[]
@@ -71,7 +49,7 @@ const mapFrontendRiskToBackend = (risk: Partial<RiskType>) => {
     content_expectations: risk.inputExpectations || null,
     output_structure: risk.outputStructure || [],
     prompt: risk.aiPrompt || null,
-    state: risk.status ? mapFrontendStatus(risk.status) : 'draft',
+    status: risk.status || 'draft',
   };
 };
 
