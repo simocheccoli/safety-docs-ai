@@ -341,7 +341,7 @@ export const dvrApi = {
  */
 function mapDVRFromBackend(backendDVR: any): DVR {
   return {
-    id: backendDVR.uuid || backendDVR.id?.toString(),
+    id: backendDVR.id?.toString(), // Use numeric ID, not UUID
     nome: backendDVR.title,
     descrizione: backendDVR.description || '',
     numero_revisione: backendDVR.revision,
@@ -370,7 +370,7 @@ function mapFileFromBackend(backendFile: any): FileMetadata {
     rischio_nome: backendFile.risk_name || '',
     stato_elaborazione_ai: backendFile.classification_result || 'IN_ELABORAZIONE',
     motivazione_stato: backendFile.extraction_data?.motivation || '',
-    output_json_completo: backendFile.extraction_data,
+    output_json_completo: backendFile.extraction_data || {},
     output_json_modificato: backendFile.modified_extraction_data,
     modificato_manualmente: backendFile.manually_modified || false,
     inclusione_dvr: backendFile.include || false,
