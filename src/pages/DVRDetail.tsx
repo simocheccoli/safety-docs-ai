@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Save, FileCheck, AlertTriangle, FileEdit, ChevronDown, Building2, FileText } from "lucide-react";
+import { ArrowLeft, Plus, Save, FileCheck, AlertTriangle, FileEdit, ChevronDown, Building2, FileText, MapPin, Mail, Phone, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,9 @@ import { DVRInfoEditor, statusLabels, statusColors } from "@/components/dvr/DVRI
 import { dvrApi } from "@/lib/dvrApi";
 import { DVRVersionHistory } from "@/components/dvr/DVRVersionHistory";
 import { SaveRevisionDialog } from "@/components/dvr/SaveRevisionDialog";
+import { CompanyEditSheet } from "@/components/CompanyEditSheet";
+import { Company } from "@/types/company";
+import { companyApi } from "@/lib/companyApi";
 
 export default function DVRDetail() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +25,8 @@ export default function DVRDetail() {
   const [files, setFiles] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [showRevisionDialog, setShowRevisionDialog] = useState(false);
+  const [showCompanySheet, setShowCompanySheet] = useState(false);
+  const [fullCompany, setFullCompany] = useState<Company | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -40,6 +45,16 @@ export default function DVRDetail() {
       if (dvrData) {
         setDvr(dvrData);
         setFiles(filesData);
+        
+        // Carica i dettagli completi dell'azienda se presente
+        if (dvrData.company_id) {
+          try {
+            const companyData = await companyApi.getById(dvrData.company_id);
+            setFullCompany(companyData);
+          } catch (error) {
+            console.error("Errore nel caricamento dell'azienda:", error);
+          }
+        }
       }
     } catch (error) {
       toast({
@@ -147,16 +162,90 @@ export default function DVRDetail() {
                 </Badge>
                 <Badge variant="outline">Revisione {dvr.numero_revisione}</Badge>
               </div>
-              <div className="flex items-center gap-2 mb-2 p-2 rounded-md border-2" style={{ borderColor: 'hsl(var(--primary))', backgroundColor: 'hsl(var(--primary) / 0.05)' }}>
-                <Building2 className="h-5 w-5" style={{ color: 'hsl(var(--primary))' }} />
-                {dvr.company ? (
-                  <span className="font-semibold text-base" style={{ color: 'hsl(var(--primary))' }}>
-                    {dvr.company.name}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground italic">Nessuna azienda associata</span>
-                )}
-              </div>
+              {fullCompany ? (
+                <div className="mb-3 p-4 rounded-lg border-2" style={{ 
+                  borderColor: 'hsl(var(--primary))', 
+                  backgroundColor: 'hsl(var(--primary) / 0.05)' 
+                }}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      <Building2 className="h-5 w-5 mt-1" style={{ color: 'hsl(var(--primary))' }} />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-base" style={{ color: 'hsl(var(--primary))' }}>
+                            {fullCompany.name}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          {fullCompany.vat_number && (
+                            <div className="text-muted-foreground">
+                              P.IVA: {fullCompany.vat_number}
+                            </div>
+                          )}
+                          {fullCompany.tax_code && (
+                            <div className="text-muted-foreground">
+                              C.F.: {fullCompany.tax_code}
+                            </div>
+                          )}
+                        </div>
+                        {fullCompany.address && (
+                          <div className="flex items-start gap-2 text-sm">
+                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                            <div>
+                              <div>{fullCompany.address}</div>
+                              {(fullCompany.zip || fullCompany.city) && (
+                                <div className="text-muted-foreground">
+                                  {fullCompany.zip} {fullCompany.city} {fullCompany.province}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-3 text-sm">
+                          {fullCompany.email && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Mail className="h-3 w-3" />
+                              <span>{fullCompany.email}</span>
+                            </div>
+                          )}
+                          {fullCompany.phone && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Phone className="h-3 w-3" />
+                              <span>{fullCompany.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setShowCompanySheet(true)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : dvr.company ? (
+                <div className="mb-3 p-4 rounded-lg border-2" style={{ 
+                  borderColor: 'hsl(var(--primary))', 
+                  backgroundColor: 'hsl(var(--primary) / 0.05)' 
+                }}>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5" style={{ color: 'hsl(var(--primary))' }} />
+                    <span className="font-semibold text-base" style={{ color: 'hsl(var(--primary))' }}>
+                      {dvr.company.name}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-3 p-4 rounded-lg border-2 bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-muted-foreground italic">Nessuna azienda associata</span>
+                  </div>
+                </div>
+              )}
               {dvr.descrizione && (
                 <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
                   {dvr.descrizione}
@@ -297,6 +386,15 @@ export default function DVRDetail() {
         onSave={handleSaveRevision}
         isSaving={isSaving}
       />
+
+      {fullCompany && (
+        <CompanyEditSheet
+          open={showCompanySheet}
+          onOpenChange={setShowCompanySheet}
+          company={fullCompany}
+          onSuccess={loadDVR}
+        />
+      )}
     </div>
   );
 }

@@ -2,38 +2,19 @@ import { useState, useEffect } from 'react';
 import { Building2, Plus, Pencil, Trash2, MapPin, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { companyApi } from '@/lib/companyApi';
-import { Company, CreateCompanyData } from '@/types/company';
+import { Company } from '@/types/company';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { CompanyEditSheet } from '@/components/CompanyEditSheet';
 
 export default function Companies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
-  const [formData, setFormData] = useState<CreateCompanyData>({
-    name: '',
-    vat_number: '',
-    tax_code: '',
-    address: '',
-    zip: '',
-    city: '',
-    province: '',
-    country: '',
-    email: '',
-    phone: '',
-    pec: '',
-    legal_representative: '',
-    rspp: '',
-    doctor: '',
-    consultant: '',
-  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -56,84 +37,9 @@ export default function Companies() {
     }
   };
 
-  const handleOpenDialog = (company?: Company) => {
-    if (company) {
-      setSelectedCompany(company);
-      setFormData({
-        name: company.name,
-        vat_number: company.vat_number || '',
-        tax_code: company.tax_code || '',
-        address: company.address || '',
-        zip: company.zip || '',
-        city: company.city || '',
-        province: company.province || '',
-        country: company.country || '',
-        email: company.email || '',
-        phone: company.phone || '',
-        pec: company.pec || '',
-        legal_representative: company.legal_representative || '',
-        rspp: company.rspp || '',
-        doctor: company.doctor || '',
-        consultant: company.consultant || '',
-      });
-    } else {
-      setSelectedCompany(null);
-      setFormData({
-        name: '',
-        vat_number: '',
-        tax_code: '',
-        address: '',
-        zip: '',
-        city: '',
-        province: '',
-        country: '',
-        email: '',
-        phone: '',
-        pec: '',
-        legal_representative: '',
-        rspp: '',
-        doctor: '',
-        consultant: '',
-      });
-    }
-    setDialogOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name.trim()) {
-      toast({
-        title: 'Errore',
-        description: 'Il nome è obbligatorio',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      if (selectedCompany) {
-        await companyApi.update(selectedCompany.id, formData);
-        toast({
-          title: 'Successo',
-          description: 'Azienda aggiornata con successo',
-        });
-      } else {
-        await companyApi.create(formData);
-        toast({
-          title: 'Successo',
-          description: 'Azienda creata con successo',
-        });
-      }
-      setDialogOpen(false);
-      loadCompanies();
-    } catch (error) {
-      toast({
-        title: 'Errore',
-        description: selectedCompany ? 'Impossibile aggiornare l\'azienda' : 'Impossibile creare l\'azienda',
-        variant: 'destructive',
-      });
-    }
+  const handleOpenSheet = (company?: Company) => {
+    setSelectedCompany(company || null);
+    setSheetOpen(true);
   };
 
   const handleDelete = async () => {
@@ -157,9 +63,6 @@ export default function Companies() {
     }
   };
 
-  const handleChange = (field: keyof CreateCompanyData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
 
   if (loading) {
     return (
@@ -179,7 +82,7 @@ export default function Companies() {
           <h1 className="text-4xl font-bold mb-2">Aziende</h1>
           <p className="text-muted-foreground">Gestisci le aziende clienti</p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
+        <Button onClick={() => handleOpenSheet()}>
           <Plus className="mr-2 h-4 w-4" />
           Nuova Azienda
         </Button>
@@ -191,7 +94,7 @@ export default function Companies() {
             <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Nessuna azienda trovata</h3>
             <p className="text-muted-foreground mb-4">Inizia aggiungendo la prima azienda</p>
-            <Button onClick={() => handleOpenDialog()}>
+            <Button onClick={() => handleOpenSheet()}>
               <Plus className="mr-2 h-4 w-4" />
               Crea Azienda
             </Button>
@@ -211,7 +114,7 @@ export default function Companies() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => handleOpenDialog(company)}
+                      onClick={() => handleOpenSheet(company)}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -269,165 +172,15 @@ export default function Companies() {
         </div>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedCompany ? 'Modifica Azienda' : 'Nuova Azienda'}
-            </DialogTitle>
-            <DialogDescription>
-              Inserisci i dati dell'azienda
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="name">Nome Azienda *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleChange('name', e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="vat_number">Partita IVA</Label>
-                <Input
-                  id="vat_number"
-                  value={formData.vat_number}
-                  onChange={(e) => handleChange('vat_number', e.target.value)}
-                  maxLength={20}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tax_code">Codice Fiscale</Label>
-                <Input
-                  id="tax_code"
-                  value={formData.tax_code}
-                  onChange={(e) => handleChange('tax_code', e.target.value)}
-                  maxLength={20}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="address">Indirizzo</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => handleChange('address', e.target.value)}
-                  maxLength={255}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="zip">CAP</Label>
-                <Input
-                  id="zip"
-                  value={formData.zip}
-                  onChange={(e) => handleChange('zip', e.target.value)}
-                  maxLength={10}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="city">Città</Label>
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => handleChange('city', e.target.value)}
-                  maxLength={100}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="province">Provincia</Label>
-                <Input
-                  id="province"
-                  value={formData.province}
-                  onChange={(e) => handleChange('province', e.target.value)}
-                  maxLength={5}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="country">Paese</Label>
-                <Input
-                  id="country"
-                  value={formData.country}
-                  onChange={(e) => handleChange('country', e.target.value)}
-                  maxLength={100}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleChange('email', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefono</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => handleChange('phone', e.target.value)}
-                  maxLength={30}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="pec">PEC</Label>
-                <Input
-                  id="pec"
-                  type="email"
-                  value={formData.pec}
-                  onChange={(e) => handleChange('pec', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="legal_representative">Rappresentante Legale</Label>
-                <Input
-                  id="legal_representative"
-                  value={formData.legal_representative}
-                  onChange={(e) => handleChange('legal_representative', e.target.value)}
-                  maxLength={255}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="rspp">RSPP</Label>
-                <Input
-                  id="rspp"
-                  value={formData.rspp}
-                  onChange={(e) => handleChange('rspp', e.target.value)}
-                  maxLength={255}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="doctor">Medico Competente</Label>
-                <Input
-                  id="doctor"
-                  value={formData.doctor}
-                  onChange={(e) => handleChange('doctor', e.target.value)}
-                  maxLength={255}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="consultant">Consulente</Label>
-                <Input
-                  id="consultant"
-                  value={formData.consultant}
-                  onChange={(e) => handleChange('consultant', e.target.value)}
-                  maxLength={255}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Annulla
-              </Button>
-              <Button type="submit">
-                {selectedCompany ? 'Aggiorna' : 'Crea'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <CompanyEditSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        company={selectedCompany || undefined}
+        onSuccess={() => {
+          setSheetOpen(false);
+          loadCompanies();
+        }}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
