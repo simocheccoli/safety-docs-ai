@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Save, FileCheck, AlertTriangle, FileEdit, ChevronDown, Building2 } from "lucide-react";
+import { ArrowLeft, Plus, Save, FileCheck, AlertTriangle, FileEdit, ChevronDown, Building2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -161,6 +161,24 @@ export default function DVRDetail() {
                 <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
                   {dvr.descrizione}
                 </p>
+              )}
+              {dvr.revision_note && (
+                <div className="mt-3 p-3 rounded-lg border-2" style={{ 
+                  borderColor: 'hsl(var(--primary))', 
+                  backgroundColor: 'hsl(var(--primary) / 0.05)' 
+                }}>
+                  <div className="flex items-start gap-2">
+                    <FileText className="h-4 w-4 mt-0.5" style={{ color: 'hsl(var(--primary))' }} />
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold mb-1" style={{ color: 'hsl(var(--primary))' }}>
+                        Nota Revisione {dvr.numero_revisione}:
+                      </p>
+                      <p className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>
+                        {dvr.revision_note}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
               <p className="text-xs text-muted-foreground mt-1">
                 Ultima modifica: {new Date(dvr.data_ultima_modifica).toLocaleString('it-IT')}

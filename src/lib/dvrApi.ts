@@ -398,6 +398,7 @@ function mapDVRFromBackend(backendDVR: any): DVR {
     nome: backendDVR.title,
     descrizione: backendDVR.description || '',
     numero_revisione: backendDVR.revision,
+    revision_note: backendDVR.revision_note || backendDVR.note,
     data_creazione: backendDVR.created_at,
     data_ultima_modifica: backendDVR.updated_at,
     stato: (backendDVR.status || 'BOZZA') as DVRStatus,
