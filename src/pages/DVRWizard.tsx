@@ -101,7 +101,10 @@ export default function DVRWizard() {
       </Card>
 
       {currentStep === 'upload' && (
-        <FileUploadStep onFilesSelected={handleFilesSelected} />
+        <FileUploadStep 
+          onFilesSelected={handleFilesSelected}
+          existingDvrId={existingDvrId || undefined}
+        />
       )}
 
       {currentStep === 'classify' && (

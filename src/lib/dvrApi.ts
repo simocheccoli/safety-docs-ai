@@ -319,6 +319,35 @@ export const dvrApi = {
   },
 
   /**
+   * Aggiunge file a un DVR esistente
+   */
+  addFilesToDVR: async (dvrId: string, files: File[]): Promise<DVR> => {
+    try {
+      const formData = new FormData();
+      
+      files.forEach(file => {
+        formData.append('files[]', file);
+      });
+
+      const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/files`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Errore nell'aggiunta dei file");
+      }
+      
+      const backendData = await response.json();
+      return mapDVRFromBackend(backendData);
+    } catch (error) {
+      console.error("Errore addFilesToDVR:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Avvia l'elaborazione AI dei file
    */
   startProcessing: async (dvrId: string, apiKey?: string): Promise<void> => {

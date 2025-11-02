@@ -49,24 +49,34 @@ export function FileReviewStep({ files, dvrName, companyId, existingDvrId, onCom
     try {
       setSaving(true);
 
-      // Crea il DVR con i file tramite API
-      const createdDvr = await dvrApi.createDVR(
-        dvrName,
-        reviewedFiles.map(f => f.file),
-        companyId
-      );
+      let resultDvr;
 
-      console.log("DVR creato con ID:", createdDvr.id);
+      if (existingDvrId) {
+        // Aggiungi file a un DVR esistente
+        resultDvr = await dvrApi.addFilesToDVR(
+          existingDvrId,
+          reviewedFiles.map(f => f.file)
+        );
+        console.log("File aggiunti al DVR esistente con ID:", resultDvr.id);
+      } else {
+        // Crea un nuovo DVR con i file
+        resultDvr = await dvrApi.createDVR(
+          dvrName,
+          reviewedFiles.map(f => f.file),
+          companyId
+        );
+        console.log("DVR creato con ID:", resultDvr.id);
+      }
 
       // Aggiorna le classificazioni e le inclusioni per ogni file
-      if (createdDvr.files && createdDvr.files.length > 0) {
+      if (resultDvr.files && resultDvr.files.length > 0) {
         const fileUpdatePromises = reviewedFiles.map(async (fileObj, index) => {
           // Usa i file mappati correttamente
-          const mappedFile = createdDvr.files?.[index];
+          const mappedFile = resultDvr.files?.[index];
           if (!mappedFile || !mappedFile.file_id) return;
 
           await dvrApi.updateFile(
-            createdDvr.id,
+            resultDvr.id,
             mappedFile.file_id,
             {
               rischio_associato: fileObj.metadata.rischio_associato,
@@ -80,21 +90,21 @@ export function FileReviewStep({ files, dvrName, companyId, existingDvrId, onCom
       }
 
       toast({
-        title: "DVR Creato",
+        title: existingDvrId ? "File Aggiunti" : "DVR Creato",
         description: `${reviewedFiles.length} documenti sono stati salvati con successo`,
       });
 
       // Assicurati che l'ID sia presente prima del redirect
-      if (!createdDvr.id) {
+      if (!resultDvr.id) {
         throw new Error("ID del DVR non disponibile");
       }
 
-      onComplete(createdDvr.id);
+      onComplete(resultDvr.id);
     } catch (error) {
       console.error("Errore nel salvataggio:", error);
       toast({
         title: "Errore",
-        description: error instanceof Error ? error.message : "Impossibile creare il DVR. Riprova.",
+        description: error instanceof Error ? error.message : existingDvrId ? "Impossibile aggiungere i file. Riprova." : "Impossibile creare il DVR. Riprova.",
         variant: "destructive",
       });
     } finally {
