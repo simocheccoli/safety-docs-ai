@@ -149,15 +149,23 @@ export default function DVRDetail() {
   return (
     <div className="space-y-6">
       {/* Header con torna indietro */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/dvr')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">{dvr.nome}</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Ultima modifica: {new Date(dvr.data_ultima_modifica).toLocaleString('it-IT')}
-          </p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/dvr')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">{dvr.nome}</h1>
+            <p className="text-xs text-muted-foreground mt-1">
+              Ultima modifica: {new Date(dvr.data_ultima_modifica).toLocaleString('it-IT')}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge className={statusColors[dvr.stato]}>
+            {statusLabels[dvr.stato]}
+          </Badge>
+          <Badge variant="outline">Revisione {dvr.numero_revisione}</Badge>
         </div>
       </div>
 
@@ -165,14 +173,6 @@ export default function DVRDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Colonna sinistra: Info DVR e Azienda */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Badge stato e revisione */}
-          <div className="flex items-center gap-2">
-            <Badge className={statusColors[dvr.stato]}>
-              {statusLabels[dvr.stato]}
-            </Badge>
-            <Badge variant="outline">Revisione {dvr.numero_revisione}</Badge>
-          </div>
-
           {/* Descrizione */}
           {dvr.descrizione && (
             <p className="text-sm text-muted-foreground">
@@ -201,9 +201,9 @@ export default function DVRDetail() {
 
           {/* Azienda */}
           {fullCompany ? (
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-start justify-between gap-4">
+            <Card className="flex-1">
+              <CardContent className="pt-4 h-full">
+                <div className="flex items-start justify-between gap-4 h-full">
                   <div className="flex items-start gap-3 flex-1">
                     <div className="p-2 rounded-lg bg-primary/10">
                       <Building2 className="h-5 w-5 text-primary" />
@@ -261,8 +261,8 @@ export default function DVRDetail() {
               </CardContent>
             </Card>
           ) : dvr.company ? (
-            <Card>
-              <CardContent className="pt-4">
+            <Card className="flex-1">
+              <CardContent className="pt-4 h-full flex items-center">
                 <div className="flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-primary" />
                   <span className="font-semibold">{dvr.company.name}</span>
@@ -270,8 +270,8 @@ export default function DVRDetail() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardContent className="pt-4">
+            <Card className="flex-1">
+              <CardContent className="pt-4 h-full flex items-center">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Building2 className="h-5 w-5" />
                   <span className="italic">Nessuna azienda associata</span>
