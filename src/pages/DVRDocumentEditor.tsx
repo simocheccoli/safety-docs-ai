@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, FileText, Code, FileEdit, RefreshCw, Download } from "lucide-react";
+import { ArrowLeft, FileText, RefreshCw, Download, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { dvrApi } from "@/lib/dvrApi";
 import { DVR } from "@/types/dvr";
 import { toast } from "@/hooks/use-toast";
-import { DocumentEditor } from "@/components/dvr/DocumentEditor";
-import { useDvrDocument } from "@/hooks/useDvrDocument";
 import { SuperDoc } from "@harbour-enterprises/superdoc";
 import "@harbour-enterprises/superdoc/style.css";
 
@@ -18,28 +16,11 @@ export default function DVRDocumentEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [dvr, setDvr] = useState<DVR | null>(null);
-  const [dvrLoading, setDvrLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
   const [documentTitle, setDocumentTitle] = useState("");
-  const [editorMode, setEditorMode] = useState<'html' | 'superdoc'>('html');
   const superDocRef = useRef<any>(null);
   const superDocContainerRef = useRef<HTMLDivElement>(null);
-
-  // Use the document hook for all document operations
-  const {
-    html,
-    setHtml,
-    loading: documentLoading,
-    saving,
-    regenerating,
-    exporting,
-    downloadUrl,
-    saveDocument,
-    regenerateDocument,
-    exportDocument,
-  } = useDvrDocument({
-    dvrId: id || '',
-    autoSaveDelay: 0, // Manual save only
-  });
 
   useEffect(() => {
     if (id) {
@@ -51,7 +32,7 @@ export default function DVRDocumentEditor() {
     if (!id) return;
     
     try {
-      setDvrLoading(true);
+      setLoading(true);
       const dvrData = await dvrApi.getDVR(id);
       
       if (dvrData) {
@@ -74,12 +55,12 @@ export default function DVRDocumentEditor() {
       });
       navigate('/dvr');
     } finally {
-      setDvrLoading(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (editorMode === 'superdoc' && superDocContainerRef.current) {
+    if (dvr?.final_document_path && superDocContainerRef.current) {
       // Se c'è già un'istanza, distruggi e ricrea con il nuovo documento
       if (superDocRef.current) {
         try {
@@ -102,37 +83,23 @@ export default function DVRDocumentEditor() {
         superDocRef.current = null;
       }
     };
-  }, [editorMode, downloadUrl]);
+  }, [dvr?.final_document_path]);
 
   const initializeSuperDoc = async () => {
+    if (!dvr?.final_document_path) return;
+    
     try {
       if (superDocContainerRef.current) {
-        let documentToLoad = '/templates/dvr_template.docx';
+        // Scarica il documento dal path
+        const downloadUrl = `${API_BASE_URL}/api/dvrs/${id}/download`;
+        const response = await fetch(downloadUrl);
         
-        // Se c'è un downloadUrl, scarica il file come blob
-        if (downloadUrl) {
-          try {
-            const response = await fetch(downloadUrl);
-            
-            // Verifica se la risposta è un file binario
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-              // È JSON, non un file - usa il template
-              console.warn('Download URL ritorna JSON invece di DOCX, uso template');
-              toast({
-                title: "Avviso",
-                description: "Documento non ancora disponibile, carico il template",
-                variant: "destructive",
-              });
-            } else if (response.ok) {
-              // È un file binario - crea blob URL
-              const blob = await response.blob();
-              documentToLoad = URL.createObjectURL(blob);
-            }
-          } catch (error) {
-            console.error('Errore nel download del documento:', error);
-          }
+        if (!response.ok) {
+          throw new Error("Impossibile scaricare il documento");
         }
+        
+        const blob = await response.blob();
+        const documentToLoad = URL.createObjectURL(blob);
         
         superDocRef.current = new SuperDoc({
           selector: '#superdoc-container',
@@ -145,9 +112,7 @@ export default function DVRDocumentEditor() {
             console.log('SuperDoc pronto', event);
             toast({
               title: "Editor Caricato",
-              description: downloadUrl && documentToLoad !== '/templates/dvr_template.docx' 
-                ? "Documento caricato con successo" 
-                : "Template DVR caricato con successo",
+              description: "Documento caricato con successo",
             });
           },
           onEditorCreate: (event: any) => {
@@ -202,25 +167,35 @@ export default function DVRDocumentEditor() {
   };
 
   const handleRegenerate = async () => {
+    if (!id) return;
+    
     try {
-      await regenerateDocument();
+      setRegenerating(true);
+      await dvrApi.regenerateDocument(id);
+      
+      // Ricarica il DVR per ottenere il nuovo final_document_path
+      const updatedDvr = await dvrApi.getDVR(id);
+      if (updatedDvr) {
+        setDvr(updatedDvr);
+      }
+      
+      toast({
+        title: "Documento Rigenerato",
+        description: "Il documento è stato rigenerato dal template con successo",
+      });
     } catch (error) {
       console.error('Errore rigenerazione:', error);
+      toast({
+        title: "Errore",
+        description: "Impossibile rigenerare il documento",
+        variant: "destructive",
+      });
+    } finally {
+      setRegenerating(false);
     }
   };
 
-  const handleExportAPI = async (format: 'docx' | 'pdf') => {
-    try {
-      await exportDocument(format);
-    } catch (error) {
-      console.error('Errore esportazione:', error);
-    }
-  };
-
-  const isLoading = dvrLoading || documentLoading;
-  const isProcessing = saving || regenerating || exporting;
-
-  if (isLoading || !dvr) {
+  if (loading || !dvr) {
     return (
       <div className="flex items-center justify-center h-screen">
         <p className="text-muted-foreground">Caricamento...</p>
@@ -255,64 +230,22 @@ export default function DVRDocumentEditor() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Tabs value={editorMode} onValueChange={(v) => setEditorMode(v as 'html' | 'superdoc')}>
-              <TabsList>
-                <TabsTrigger value="html" className="flex items-center gap-2">
-                  <Code className="h-4 w-4" />
-                  Editor HTML
-                </TabsTrigger>
-                <TabsTrigger value="superdoc" className="flex items-center gap-2">
-                  <FileEdit className="h-4 w-4" />
-                  Editor DOCX
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            
-            {editorMode === 'html' ? (
-              <>
-                <Button 
-                  variant="outline" 
-                  onClick={handleRegenerate}
-                  disabled={isProcessing}
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${regenerating ? 'animate-spin' : ''}`} />
-                  Rigenera da Template
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleExportAPI('docx')}
-                  disabled={isProcessing}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Esporta DOCX
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleExportAPI('pdf')}
-                  disabled={isProcessing}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Esporta PDF
-                </Button>
-                <Button 
-                  onClick={saveDocument}
-                  disabled={isProcessing}
-                >
-                  <Save className={`h-4 w-4 mr-2 ${saving ? 'animate-pulse' : ''}`} />
-                  {saving ? 'Salvataggio...' : 'Salva Documento'}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline" onClick={handleExportDocx} disabled={isProcessing}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Esporta DOCX
-                </Button>
-                <Button onClick={saveDocument} disabled={isProcessing}>
-                  <Save className={`h-4 w-4 mr-2 ${saving ? 'animate-pulse' : ''}`} />
-                  {saving ? 'Salvataggio...' : 'Salva Documento'}
-                </Button>
-              </>
+            <Button 
+              variant="outline" 
+              onClick={handleRegenerate}
+              disabled={regenerating}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${regenerating ? 'animate-spin' : ''}`} />
+              Rigenera da Template
+            </Button>
+            {dvr.final_document_path && (
+              <Button 
+                variant="outline" 
+                onClick={handleExportDocx}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Esporta DOCX
+              </Button>
             )}
           </div>
         </div>
@@ -321,11 +254,15 @@ export default function DVRDocumentEditor() {
       {/* Editor */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full max-w-screen-2xl mx-auto p-4">
-          {editorMode === 'html' ? (
-            <DocumentEditor 
-              content={html} 
-              onChange={setHtml}
-            />
+          {!dvr.final_document_path ? (
+            <Alert className="max-w-2xl mx-auto mt-8">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Documento non ancora generato</AlertTitle>
+              <AlertDescription>
+                Non è ancora stato generato un documento per questo DVR. 
+                Clicca su "Rigenera da Template" per creare il documento iniziale.
+              </AlertDescription>
+            </Alert>
           ) : (
             <div className="h-full flex flex-col space-y-2">
               <div id="superdoc-toolbar" className="border rounded-lg p-2 bg-background"></div>

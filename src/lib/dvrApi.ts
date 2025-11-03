@@ -504,6 +504,7 @@ function mapDVRFromBackend(backendDVR: any): DVR {
     updated_by: backendDVR.updated_by || '',
     files_count: backendDVR.files_count,
     files: backendDVR.files ? backendDVR.files.map(mapFileFromBackend) : undefined,
+    final_document_path: backendDVR.final_document_path,
   } as DVR;
 }
 
