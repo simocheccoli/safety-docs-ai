@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FileUploadStep } from "@/components/dvr/FileUploadStep";
@@ -16,6 +16,9 @@ type WizardStep = 'upload' | 'classification' | 'processing' | 'review';
 
 export default function DVRWizard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const existingDvrId = searchParams.get('dvrId') || undefined;
+  
   const [currentStep, setCurrentStep] = useState<WizardStep>('upload');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [dvrName, setDvrName] = useState('');
@@ -51,33 +54,76 @@ export default function DVRWizard() {
     try {
       setIsCreating(true);
       
-      // Crea il mapping nome_file -> risk_id
-      const fileRiskMappings: Record<string, number> = {};
-      classifiedFiles.forEach(cf => {
-        if (cf.metadata.risk_id) {
-          fileRiskMappings[cf.file.name] = cf.metadata.risk_id;
+      if (existingDvrId) {
+        // Aggiungi file a DVR esistente
+        const updatedDVR = await dvrApi.addFilesToDVR(
+          existingDvrId,
+          classifiedFiles.map(f => f.file)
+        );
+        
+        // Aggiorna ogni file con risk_id e include
+        for (const classifiedFile of classifiedFiles) {
+          const matchingFile = updatedDVR.files?.find(f => f.file_name === classifiedFile.file.name);
+          
+          if (matchingFile && classifiedFile.metadata.risk_id) {
+            await dvrApi.updateFile(
+              updatedDVR.id,
+              matchingFile.id.toString(),
+              {
+                risk_id: classifiedFile.metadata.risk_id,
+                include: classifiedFile.metadata.include ?? true,
+                notes: classifiedFile.metadata.notes
+              }
+            );
+          }
         }
-      });
-      
-      const newDVR = await dvrApi.createDVR(
-        dvrName,
-        classifiedFiles.map(f => f.file),
-        companyId,
-        undefined, // description
-        fileRiskMappings
-      );
-      
-      toast({
-        title: "DVR Creato",
-        description: `Il DVR "${newDVR.nome}" è stato creato con successo`,
-      });
-      
-      navigate(`/dvr/${newDVR.id}`);
+        
+        toast({
+          title: "File Aggiunti",
+          description: `I file sono stati aggiunti al DVR con successo`,
+        });
+        
+        navigate(`/dvr/${existingDvrId}`);
+      } else {
+        // Crea nuovo DVR
+        const newDVR = await dvrApi.createDVR(
+          dvrName,
+          classifiedFiles.map(f => f.file),
+          companyId,
+          undefined // description
+        );
+        
+        // Aggiorna ogni file con risk_id e include
+        for (const classifiedFile of classifiedFiles) {
+          const matchingFile = newDVR.files?.find(f => f.file_name === classifiedFile.file.name);
+          
+          if (matchingFile && classifiedFile.metadata.risk_id) {
+            await dvrApi.updateFile(
+              newDVR.id,
+              matchingFile.id.toString(),
+              {
+                risk_id: classifiedFile.metadata.risk_id,
+                include: classifiedFile.metadata.include ?? true,
+                notes: classifiedFile.metadata.notes
+              }
+            );
+          }
+        }
+        
+        toast({
+          title: "DVR Creato",
+          description: `Il DVR "${newDVR.nome}" è stato creato con successo`,
+        });
+        
+        navigate(`/dvr/${newDVR.id}`);
+      }
     } catch (error) {
       console.error("Errore nella creazione del DVR:", error);
       toast({
         title: "Errore",
-        description: "Impossibile creare il DVR. Riprova più tardi.",
+        description: existingDvrId 
+          ? "Impossibile aggiungere i file. Riprova più tardi."
+          : "Impossibile creare il DVR. Riprova più tardi.",
         variant: "destructive",
       });
     } finally {
@@ -91,6 +137,7 @@ export default function DVRWizard() {
         return (
           <FileUploadStep 
             onFilesSelected={handleFilesSelected}
+            existingDvrId={existingDvrId}
           />
         );
       
@@ -138,13 +185,15 @@ export default function DVRWizard() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate('/dvr')}
+          onClick={() => navigate(existingDvrId ? `/dvr/${existingDvrId}` : '/dvr')}
           disabled={isCreating}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold">Nuovo DVR</h1>
+          <h1 className="text-3xl font-bold">
+            {existingDvrId ? 'Aggiungi File al DVR' : 'Nuovo DVR'}
+          </h1>
           <p className="text-muted-foreground">
             Step {getStepNumber()} di 4: {
               currentStep === 'upload' ? 'Caricamento Documenti' :

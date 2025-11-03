@@ -8,14 +8,13 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 
 export const dvrApi = {
   /**
-   * Crea un nuovo DVR con file e classificazioni
+   * Crea un nuovo DVR con file
    */
   createDVR: async (
     title: string, 
     files: File[], 
     companyId?: number, 
-    description?: string,
-    fileRiskMappings?: Record<string, number>
+    description?: string
   ): Promise<DVR> => {
     try {
       const formData = new FormData();
@@ -32,11 +31,6 @@ export const dvrApi = {
       files.forEach(file => {
         formData.append('files[]', file);
       });
-
-      // Aggiungi i mapping rischio-file se forniti
-      if (fileRiskMappings) {
-        formData.append('file_risk_mappings', JSON.stringify(fileRiskMappings));
-      }
 
       const response = await fetch(`${API_BASE_URL}/api/dvrs`, {
         method: 'POST',
@@ -199,11 +193,15 @@ export const dvrApi = {
   },
 
   /**
-   * Aggiorna un file
+   * Aggiorna un file (assegnazione rischio, inclusione, note)
    */
   updateFile: async (dvrId: string, fileId: string, data: Partial<FileMetadata>): Promise<void> => {
     try {
       const updatePayload: any = {};
+      
+      if (data.risk_id !== undefined) {
+        updatePayload.risk_id = data.risk_id;
+      }
       
       if (data.include !== undefined) {
         updatePayload.include = data.include;
@@ -214,7 +212,7 @@ export const dvrApi = {
       }
       
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/files/${fileId}`, {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
