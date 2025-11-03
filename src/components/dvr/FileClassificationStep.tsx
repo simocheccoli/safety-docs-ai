@@ -23,6 +23,18 @@ export function FileClassificationStep({ files, onClassified, onBack }: FileClas
     loadRisks();
   }, []);
 
+  // Inizializza le classificazioni con il primo rischio quando i rischi vengono caricati
+  useEffect(() => {
+    if (risks.length > 0 && Object.keys(classifications).length === 0) {
+      const defaultRiskId = parseInt(risks[0].id);
+      const defaultClassifications: Record<string, number> = {};
+      files.forEach(file => {
+        defaultClassifications[file.name] = defaultRiskId;
+      });
+      setClassifications(defaultClassifications);
+    }
+  }, [risks, files]);
+
   const loadRisks = async () => {
     try {
       setLoading(true);
@@ -48,9 +60,7 @@ export function FileClassificationStep({ files, onClassified, onBack }: FileClas
       file,
       metadata: {
         file_name: file.name,
-        risk_id: classifications[file.name] !== undefined 
-          ? classifications[file.name] 
-          : (risks[0] ? parseInt(risks[0].id) : undefined),
+        risk_id: classifications[file.name],
         include: true,
         notes: ''
       }
