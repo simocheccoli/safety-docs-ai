@@ -16,6 +16,7 @@ import RiskDetail from "./pages/RiskDetail";
 import DVRList from "./pages/DVRList";
 import DVRDetail from "./pages/DVRDetail";
 import DVRDocumentEditor from "./pages/DVRDocumentEditor";
+import DVRWizard from "./pages/DVRWizard";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => {
               <Route path="/rischi" element={<RiskManagement />} />
               <Route path="/rischi/:id" element={<RiskDetail />} />
           <Route path="/dvr" element={<DVRList />} />
+          <Route path="/dvr/wizard" element={<DVRWizard />} />
           <Route path="/dvr/:id" element={<DVRDetail />} />
           <Route path="/dvr/:id/document" element={<DVRDocumentEditor />} />
             <Route path="/users" element={<Users />} />
