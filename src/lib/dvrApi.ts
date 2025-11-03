@@ -192,16 +192,22 @@ export const dvrApi = {
    */
   updateFile: async (dvrId: string, fileId: string, data: Partial<FileMetadata>): Promise<void> => {
     try {
+      const updatePayload: any = {};
+      
+      if (data.include !== undefined) {
+        updatePayload.include = data.include;
+      }
+      
+      if (data.notes !== undefined) {
+        updatePayload.notes = data.notes;
+      }
+      
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/files/${fileId}`, {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          risk_id: data.rischio_associato,
-          include: data.inclusione_dvr,
-          notes: data.note_rspp,
-        }),
+        body: JSON.stringify(updatePayload),
       });
       
       if (!response.ok) {
@@ -513,23 +519,20 @@ function mapDVRFromBackend(backendDVR: any): DVR {
  */
 function mapFileFromBackend(backendFile: any): FileMetadata {
   return {
-    file_id: backendFile.id?.toString(),
-    dvr_id: backendFile.dvr_id?.toString(),
-    nome_file: backendFile.file_name,
-    file_size: backendFile.file_size || 0,
-    file_type: backendFile.file_type || '',
-    file_content: backendFile.file_content,
-    rischio_associato: backendFile.risk_id?.toString() || '',
-    rischio_nome: backendFile.risk_name || '',
-    stato_elaborazione_ai: backendFile.classification_result || 'IN_ELABORAZIONE',
-    motivazione_stato: backendFile.extraction_data?.motivation || '',
-    output_json_completo: backendFile.extraction_data || {},
-    output_json_modificato: backendFile.modified_extraction_data,
-    modificato_manualmente: backendFile.manually_modified || false,
-    inclusione_dvr: backendFile.include || false,
-    note_rspp: backendFile.notes || '',
-    created_at: backendFile.created_at || new Date().toISOString(),
-    updated_at: backendFile.updated_at || new Date().toISOString(),
+    id: backendFile.id,
+    dvr_id: backendFile.dvr_id,
+    file_name: backendFile.file_name,
+    include: backendFile.include !== false,
+    risk_id: backendFile.risk_id,
+    notes: backendFile.notes || undefined,
+    risk: {
+      id: backendFile.risk?.id || 0,
+      code: backendFile.risk?.code || '',
+      name: backendFile.risk?.name || '',
+      status: backendFile.risk?.status || '',
+    },
+    created_at: backendFile.created_at,
+    updated_at: backendFile.updated_at,
   };
 }
 

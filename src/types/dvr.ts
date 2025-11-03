@@ -35,23 +35,20 @@ export interface DVRVersion {
 }
 
 export interface FileMetadata {
-  file_id: string;
-  dvr_id: string; // FK to DVR
-  nome_file: string;
-  file_size: number;
-  file_type: string;
-  file_content?: string; // Contenuto del file per anteprima
-  rischio_associato: string; // FK to RiskType.id
-  rischio_nome: string; // Nome del rischio per display
-  stato_elaborazione_ai: ElaborationStatus;
-  motivazione_stato: string;
-  output_json_completo: any;
-  output_json_modificato?: any; // Output modificato manualmente dall'utente
-  modificato_manualmente: boolean;
-  inclusione_dvr: boolean;
-  note_rspp: string;
-  created_at: string;
-  updated_at: string;
+  id: number;
+  dvr_id: number;
+  file_name: string;
+  include: boolean;
+  risk_id: number;
+  notes?: string;
+  risk: {
+    id: number;
+    code: string;
+    name: string;
+    status: string;
+  };
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface FileWithClassification {

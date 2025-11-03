@@ -148,9 +148,8 @@ export default function DVRDetail() {
     return <div>DVR non trovato</div>;
   }
 
-  const includedFiles = files.filter(f => f.inclusione_dvr);
-  const excludedFiles = files.filter(f => !f.inclusione_dvr);
-  const criticalFiles = files.filter(f => f.stato_elaborazione_ai === 'DA_ATTENZIONARE');
+  const includedFiles = files.filter(f => f.include);
+  const excludedFiles = files.filter(f => !f.include);
 
   return (
     <div className="space-y-6">
@@ -334,16 +333,7 @@ export default function DVRDetail() {
         </div>
       </div>
 
-      {criticalFiles.length > 0 && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Attenzione: {criticalFiles.length} file richiedono la tua attenzione prima della finalizzazione
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">{files.length}</CardTitle>
@@ -354,12 +344,6 @@ export default function DVRDetail() {
           <CardHeader>
             <CardTitle className="text-2xl text-green-600">{includedFiles.length}</CardTitle>
             <CardDescription>File Inclusi</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl text-yellow-600">{criticalFiles.length}</CardTitle>
-            <CardDescription>Da Attenzionare</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -384,8 +368,9 @@ export default function DVRDetail() {
           ) : (
             files.map(file => (
               <FileDetailCard 
-                key={file.file_id} 
-                file={file} 
+                key={file.id} 
+                file={file}
+                dvrId={id!}
                 onUpdate={loadDVR}
               />
             ))

@@ -13,7 +13,6 @@ import Users from "./pages/Users";
 import Companies from "./pages/Companies";
 import RiskManagement from "./pages/RiskManagement";
 import RiskDetail from "./pages/RiskDetail";
-import DVRWizard from "./pages/DVRWizard";
 import DVRList from "./pages/DVRList";
 import DVRDetail from "./pages/DVRDetail";
 import DVRDocumentEditor from "./pages/DVRDocumentEditor";
@@ -50,7 +49,6 @@ const App = () => {
               <Route path="/rischi" element={<RiskManagement />} />
               <Route path="/rischi/:id" element={<RiskDetail />} />
           <Route path="/dvr" element={<DVRList />} />
-          <Route path="/dvr/wizard" element={<DVRWizard />} />
           <Route path="/dvr/:id" element={<DVRDetail />} />
           <Route path="/dvr/:id/document" element={<DVRDocumentEditor />} />
             <Route path="/users" element={<Users />} />

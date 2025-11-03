@@ -45,7 +45,7 @@ export const deleteDVR = (dvrId: string): void => {
   localStorage.setItem(DVR_STORAGE_KEY, JSON.stringify(dvrs));
   
   // Delete associated files
-  const files = getDVRFiles().filter(f => f.dvr_id !== dvrId);
+  const files = getDVRFiles().filter(f => String(f.dvr_id) !== dvrId);
   localStorage.setItem(FILES_STORAGE_KEY, JSON.stringify(files));
   
   // Delete associated versions
@@ -58,12 +58,12 @@ export const deleteDVR = (dvrId: string): void => {
 export const getDVRFiles = (dvrId?: string): FileMetadata[] => {
   const data = localStorage.getItem(FILES_STORAGE_KEY);
   const allFiles = data ? JSON.parse(data) : [];
-  return dvrId ? allFiles.filter((f: FileMetadata) => f.dvr_id === dvrId) : allFiles;
+  return dvrId ? allFiles.filter((f: FileMetadata) => String(f.dvr_id) === dvrId) : allFiles;
 };
 
 export const saveDVRFile = (file: FileMetadata): void => {
   const files = getDVRFiles();
-  const existingIndex = files.findIndex(f => f.file_id === file.file_id);
+  const existingIndex = files.findIndex(f => f.id === file.id);
   
   if (existingIndex >= 0) {
     files[existingIndex] = { ...file, updated_at: new Date().toISOString() };
@@ -76,7 +76,7 @@ export const saveDVRFile = (file: FileMetadata): void => {
 
 export const updateDVRFile = (fileId: string, updates: Partial<FileMetadata>): void => {
   const files = getDVRFiles();
-  const existingIndex = files.findIndex(f => f.file_id === fileId);
+  const existingIndex = files.findIndex(f => String(f.id) === fileId);
   
   if (existingIndex >= 0) {
     files[existingIndex] = { 
@@ -89,10 +89,10 @@ export const updateDVRFile = (fileId: string, updates: Partial<FileMetadata>): v
 };
 
 export const deleteDVRFile = (fileId: string): void => {
-  const files = getDVRFiles().filter(f => f.file_id !== fileId);
+  const files = getDVRFiles().filter(f => String(f.id) !== fileId);
   localStorage.setItem(FILES_STORAGE_KEY, JSON.stringify(files));
 };
 
 export const getDVRFileById = (fileId: string): FileMetadata | undefined => {
-  return getDVRFiles().find(f => f.file_id === fileId);
+  return getDVRFiles().find(f => String(f.id) === fileId);
 };
