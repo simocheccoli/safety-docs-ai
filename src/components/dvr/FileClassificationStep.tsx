@@ -48,7 +48,9 @@ export function FileClassificationStep({ files, onClassified, onBack }: FileClas
       file,
       metadata: {
         file_name: file.name,
-        risk_id: classifications[file.name] || risks[0]?.id ? parseInt(risks[0].id) : 0,
+        risk_id: classifications[file.name] !== undefined 
+          ? classifications[file.name] 
+          : (risks[0] ? parseInt(risks[0].id) : undefined),
         include: true,
         notes: ''
       }
