@@ -193,7 +193,7 @@ export const dvrApi = {
   },
 
   /**
-   * Aggiorna un file (assegnazione rischio, inclusione, note)
+   * Aggiorna un file (assegnazione rischio, inclusione, note, risultati AI)
    */
   updateFile: async (dvrId: string, fileId: string, data: Partial<FileMetadata>): Promise<void> => {
     try {
@@ -209,6 +209,14 @@ export const dvrApi = {
       
       if (data.notes !== undefined) {
         updatePayload.notes = data.notes;
+      }
+
+      if (data.classification_result !== undefined) {
+        updatePayload.classification_result = data.classification_result;
+      }
+
+      if (data.extraction_data !== undefined) {
+        updatePayload.extraction_data = data.extraction_data;
       }
       
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/files/${fileId}`, {

@@ -41,6 +41,8 @@ export interface FileMetadata {
   include: boolean;
   risk_id: number;
   notes?: string;
+  classification_result?: 'POSITIVO' | 'NEGATIVO';
+  extraction_data?: any;
   risk: {
     id: number;
     code: string;
