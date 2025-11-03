@@ -8,9 +8,15 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 
 export const dvrApi = {
   /**
-   * Crea un nuovo DVR con file
+   * Crea un nuovo DVR con file e classificazioni
    */
-  createDVR: async (title: string, files: File[], companyId?: number, description?: string): Promise<DVR> => {
+  createDVR: async (
+    title: string, 
+    files: File[], 
+    companyId?: number, 
+    description?: string,
+    fileRiskMappings?: Record<string, number>
+  ): Promise<DVR> => {
     try {
       const formData = new FormData();
       formData.append('title', title);
@@ -26,6 +32,11 @@ export const dvrApi = {
       files.forEach(file => {
         formData.append('files[]', file);
       });
+
+      // Aggiungi i mapping rischio-file se forniti
+      if (fileRiskMappings) {
+        formData.append('file_risk_mappings', JSON.stringify(fileRiskMappings));
+      }
 
       const response = await fetch(`${API_BASE_URL}/api/dvrs`, {
         method: 'POST',

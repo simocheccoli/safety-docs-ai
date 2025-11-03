@@ -51,10 +51,20 @@ export default function DVRWizard() {
     try {
       setIsCreating(true);
       
+      // Crea il mapping nome_file -> risk_id
+      const fileRiskMappings: Record<string, number> = {};
+      classifiedFiles.forEach(cf => {
+        if (cf.metadata.risk_id) {
+          fileRiskMappings[cf.file.name] = cf.metadata.risk_id;
+        }
+      });
+      
       const newDVR = await dvrApi.createDVR(
         dvrName,
         classifiedFiles.map(f => f.file),
-        companyId
+        companyId,
+        undefined, // description
+        fileRiskMappings
       );
       
       toast({
