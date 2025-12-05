@@ -1,9 +1,32 @@
 import { DVR, FileMetadata, DVRVersion, DVRStatus } from "@/types/dvr";
 
+// DEMO MODE: Use mock data instead of real API
+const DEMO_MODE = true;
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
+// Mock data storage
+let mockDVRs: DVR[] = [
+  {
+    id: "1",
+    nome: "DVR Bio5 S.r.l. - 2024",
+    descrizione: "Documento di Valutazione dei Rischi annuale",
+    stato: "BOZZA",
+    company_id: 1,
+    numero_revisione: 1,
+    data_creazione: new Date().toISOString(),
+    data_ultima_modifica: new Date().toISOString(),
+    created_by: "1",
+    updated_by: "1",
+    files: []
+  }
+];
+
+let mockFileIdCounter = 1;
+let mockDvrIdCounter = 2;
+
 /**
- * API reali per la gestione dei DVR tramite backend
+ * API per la gestione dei DVR - DEMO MODE con dati mock
  */
 
 export const dvrApi = {
@@ -16,6 +39,37 @@ export const dvrApi = {
     companyId?: number, 
     description?: string
   ): Promise<DVR> => {
+    if (DEMO_MODE) {
+      await simulateDelay(500);
+      
+      const newFiles: FileMetadata[] = files.map((file) => ({
+        id: mockFileIdCounter++,
+        dvr_id: mockDvrIdCounter,
+        file_name: file.name,
+        include: true,
+        risk_id: 1,
+        risk: { id: 1, code: "RS001", name: "Rischio generico", status: "active" },
+        created_at: new Date().toISOString()
+      }));
+      
+      const newDVR: DVR = {
+        id: (mockDvrIdCounter++).toString(),
+        nome: title,
+        descrizione: description || "",
+        stato: "BOZZA",
+        company_id: companyId,
+        numero_revisione: 1,
+        data_creazione: new Date().toISOString(),
+        data_ultima_modifica: new Date().toISOString(),
+        created_by: "1",
+        updated_by: "1",
+        files: newFiles
+      };
+      
+      mockDVRs.push(newDVR);
+      return newDVR;
+    }
+
     try {
       const formData = new FormData();
       formData.append('title', title);
@@ -54,6 +108,11 @@ export const dvrApi = {
    * Recupera tutti i DVR
    */
   getDVRList: async (): Promise<DVR[]> => {
+    if (DEMO_MODE) {
+      await simulateDelay(300);
+      return [...mockDVRs];
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs`);
       
@@ -73,6 +132,11 @@ export const dvrApi = {
    * Recupera un DVR per ID
    */
   getDVR: async (id: string): Promise<DVR | null> => {
+    if (DEMO_MODE) {
+      await simulateDelay(200);
+      return mockDVRs.find(d => d.id === id) || null;
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${id}`);
       
@@ -96,6 +160,19 @@ export const dvrApi = {
    * Aggiorna i dati di un DVR (salvataggio normale senza creare revisione)
    */
   updateDVR: async (id: string, data: Partial<DVR>): Promise<DVR> => {
+    if (DEMO_MODE) {
+      await simulateDelay(300);
+      const index = mockDVRs.findIndex(d => d.id === id);
+      if (index === -1) throw new Error("DVR non trovato");
+      
+      mockDVRs[index] = {
+        ...mockDVRs[index],
+        ...data,
+        data_ultima_modifica: new Date().toISOString()
+      };
+      return mockDVRs[index];
+    }
+
     try {
       const updatePayload: any = {};
       
@@ -138,9 +215,23 @@ export const dvrApi = {
 
   /**
    * Salva una nuova revisione del DVR (con nota)
-   * Incrementa automaticamente la versione
    */
   saveRevision: async (id: string, data: Partial<DVR>, revisionNote: string): Promise<DVR> => {
+    if (DEMO_MODE) {
+      await simulateDelay(400);
+      const index = mockDVRs.findIndex(d => d.id === id);
+      if (index === -1) throw new Error("DVR non trovato");
+      
+      mockDVRs[index] = {
+        ...mockDVRs[index],
+        ...data,
+        numero_revisione: mockDVRs[index].numero_revisione + 1,
+        revision_note: revisionNote,
+        data_ultima_modifica: new Date().toISOString()
+      };
+      return mockDVRs[index];
+    }
+
     try {
       if (revisionNote.trim().length === 0) {
         throw new Error("La nota di revisione è obbligatoria");
@@ -164,7 +255,6 @@ export const dvrApi = {
         throw new Error(error.message || "Errore nel salvataggio della revisione");
       }
       
-      // Dopo il salvataggio, recupera il DVR aggiornato
       return await dvrApi.getDVR(id) as DVR;
     } catch (error) {
       console.error("Errore saveRevision:", error);
@@ -176,6 +266,12 @@ export const dvrApi = {
    * Recupera i file associati a un DVR
    */
   getDVRFiles: async (dvrId: string): Promise<FileMetadata[]> => {
+    if (DEMO_MODE) {
+      await simulateDelay(200);
+      const dvr = mockDVRs.find(d => d.id === dvrId);
+      return dvr?.files || [];
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}`);
       
@@ -196,6 +292,18 @@ export const dvrApi = {
    * Aggiorna un file (assegnazione rischio, inclusione, note, risultati AI)
    */
   updateFile: async (dvrId: string, fileId: string, data: Partial<FileMetadata>): Promise<void> => {
+    if (DEMO_MODE) {
+      await simulateDelay(200);
+      const dvr = mockDVRs.find(d => d.id === dvrId);
+      if (dvr && dvr.files) {
+        const fileIndex = dvr.files.findIndex(f => f.id.toString() === fileId);
+        if (fileIndex !== -1) {
+          dvr.files[fileIndex] = { ...dvr.files[fileIndex], ...data };
+        }
+      }
+      return;
+    }
+
     try {
       const updatePayload: any = {};
       
@@ -241,6 +349,19 @@ export const dvrApi = {
    * Finalizza DVR
    */
   finalize: async (id: string, title: string): Promise<DVR> => {
+    if (DEMO_MODE) {
+      await simulateDelay(300);
+      const index = mockDVRs.findIndex(d => d.id === id);
+      if (index === -1) throw new Error("DVR non trovato");
+      
+      mockDVRs[index] = {
+        ...mockDVRs[index],
+        stato: "FINALIZZATO",
+        data_ultima_modifica: new Date().toISOString()
+      };
+      return mockDVRs[index];
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${id}/finalize`, {
         method: 'POST',
@@ -255,7 +376,6 @@ export const dvrApi = {
         throw new Error(error.message || "Errore nella finalizzazione del DVR");
       }
       
-      // Dopo la finalizzazione, recupera il DVR aggiornato
       return await dvrApi.getDVR(id) as DVR;
     } catch (error) {
       console.error("Errore finalize:", error);
@@ -267,6 +387,23 @@ export const dvrApi = {
    * Recupera le versioni di un DVR
    */
   getDVRVersions: async (dvrId: string): Promise<DVRVersion[]> => {
+    if (DEMO_MODE) {
+      await simulateDelay(200);
+      return [
+        {
+          id: 1,
+          dvr_id: dvrId,
+          version: 1,
+          nome: "Versione iniziale",
+          descrizione: null,
+          stato: "BOZZA",
+          revision_note: "Creazione documento",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/versions`);
       
@@ -286,6 +423,13 @@ export const dvrApi = {
    * Ripristina un DVR a una versione precedente
    */
   revertToVersion: async (dvrId: string, versionNumber: number): Promise<DVR> => {
+    if (DEMO_MODE) {
+      await simulateDelay(300);
+      const dvr = mockDVRs.find(d => d.id === dvrId);
+      if (!dvr) throw new Error("DVR non trovato");
+      return dvr;
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/revert/${versionNumber}`, {
         method: 'POST',
@@ -296,7 +440,6 @@ export const dvrApi = {
         throw new Error(error.message || "Errore nel ripristino della versione");
       }
       
-      // Dopo il ripristino, recupera il DVR aggiornato
       return await dvrApi.getDVR(dvrId) as DVR;
     } catch (error) {
       console.error("Errore revertToVersion:", error);
@@ -308,6 +451,12 @@ export const dvrApi = {
    * Elimina un DVR
    */
   deleteDVR: async (id: string): Promise<void> => {
+    if (DEMO_MODE) {
+      await simulateDelay(300);
+      mockDVRs = mockDVRs.filter(d => d.id !== id);
+      return;
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${id}`, {
         method: 'DELETE',
@@ -327,6 +476,11 @@ export const dvrApi = {
    * Scarica il documento finale del DVR
    */
   downloadDocument: async (id: string): Promise<Blob> => {
+    if (DEMO_MODE) {
+      await simulateDelay(500);
+      return new Blob(["Demo document content"], { type: "application/pdf" });
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${id}/download`);
       
@@ -345,6 +499,25 @@ export const dvrApi = {
    * Aggiunge file a un DVR esistente
    */
   addFilesToDVR: async (dvrId: string, files: File[]): Promise<DVR> => {
+    if (DEMO_MODE) {
+      await simulateDelay(400);
+      const index = mockDVRs.findIndex(d => d.id === dvrId);
+      if (index === -1) throw new Error("DVR non trovato");
+      
+      const newFiles: FileMetadata[] = files.map(file => ({
+        id: mockFileIdCounter++,
+        dvr_id: parseInt(dvrId),
+        file_name: file.name,
+        include: true,
+        risk_id: 1,
+        risk: { id: 1, code: "RS001", name: "Rischio generico", status: "active" },
+        created_at: new Date().toISOString()
+      }));
+      
+      mockDVRs[index].files = [...(mockDVRs[index].files || []), ...newFiles];
+      return mockDVRs[index];
+    }
+
     try {
       const formData = new FormData();
       
@@ -374,6 +547,11 @@ export const dvrApi = {
    * Avvia l'elaborazione AI dei file
    */
   startProcessing: async (dvrId: string, apiKey?: string): Promise<void> => {
+    if (DEMO_MODE) {
+      await simulateDelay(300);
+      return;
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/process`, {
         method: 'POST',
@@ -397,6 +575,10 @@ export const dvrApi = {
    * Verifica lo stato dell'elaborazione
    */
   getProcessingProgress: async (dvrId: string): Promise<any> => {
+    if (DEMO_MODE) {
+      return { progress: 100, status: "completed" };
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/progress`);
       
@@ -415,6 +597,11 @@ export const dvrApi = {
    * Recupera il documento HTML di un DVR
    */
   getDocument: async (dvrId: string): Promise<{ html: string }> => {
+    if (DEMO_MODE) {
+      await simulateDelay(300);
+      return { html: "<h1>Documento di Valutazione dei Rischi</h1><p>Contenuto demo del documento DVR.</p>" };
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/document`);
       
@@ -433,6 +620,11 @@ export const dvrApi = {
    * Salva il documento HTML di un DVR
    */
   updateDocument: async (dvrId: string, html: string): Promise<{ success: boolean; html: string }> => {
+    if (DEMO_MODE) {
+      await simulateDelay(300);
+      return { success: true, html };
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/document`, {
         method: 'PUT',
@@ -458,6 +650,11 @@ export const dvrApi = {
    * Rigenera il documento da template
    */
   regenerateDocument: async (dvrId: string, template?: string): Promise<{ success: boolean; document_path: string; download_url: string }> => {
+    if (DEMO_MODE) {
+      await simulateDelay(500);
+      return { success: true, document_path: "/demo/document.docx", download_url: "/demo/download" };
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/document/generate`, {
         method: 'POST',
@@ -483,6 +680,11 @@ export const dvrApi = {
    * Esporta il documento in formato DOCX o PDF
    */
   exportDocument: async (dvrId: string, format: 'docx' | 'pdf'): Promise<{ success: boolean; path: string }> => {
+    if (DEMO_MODE) {
+      await simulateDelay(500);
+      return { success: true, path: `/demo/document.${format}` };
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/dvrs/${dvrId}/export`, {
         method: 'POST',
@@ -502,70 +704,86 @@ export const dvrApi = {
       console.error("Errore exportDocument:", error);
       throw error;
     }
-  }
+  },
 };
 
-/**
- * Mappa un DVR dal formato backend a quello frontend
- */
-function mapDVRFromBackend(backendDVR: any): DVR {
-  return {
-    id: backendDVR.id?.toString(),
-    nome: backendDVR.title,
-    descrizione: backendDVR.description || '',
-    numero_revisione: backendDVR.revision,
-    revision_note: backendDVR.revision_note || backendDVR.note,
-    data_creazione: backendDVR.created_at,
-    data_ultima_modifica: backendDVR.updated_at,
-    stato: (backendDVR.status || 'BOZZA') as DVRStatus,
-    company_id: backendDVR.company_id,
-    company: backendDVR.company ? {
-      id: backendDVR.company.id,
-      name: backendDVR.company.name,
-    } : undefined,
-    created_by: backendDVR.created_by || '',
-    updated_by: backendDVR.updated_by || '',
-    files_count: backendDVR.files_count,
-    files: backendDVR.files ? backendDVR.files.map(mapFileFromBackend) : undefined,
-    final_document_path: backendDVR.final_document_path,
-  } as DVR;
+// Helper function for demo delays
+function simulateDelay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * Mappa un file dal formato backend a quello frontend
- */
-function mapFileFromBackend(backendFile: any): FileMetadata {
+// Map functions for backend data
+function mapDVRFromBackend(data: any): DVR {
   return {
-    id: backendFile.id,
-    dvr_id: backendFile.dvr_id,
-    file_name: backendFile.file_name,
-    include: backendFile.include !== false,
-    risk_id: backendFile.risk_id,
-    notes: backendFile.notes || undefined,
-    risk: {
-      id: backendFile.risk?.id || 0,
-      code: backendFile.risk?.code || '',
-      name: backendFile.risk?.name || '',
-      status: backendFile.risk?.status || '',
-    },
-    created_at: backendFile.created_at,
-    updated_at: backendFile.updated_at,
+    id: data.id?.toString() || data.id,
+    nome: data.title || data.nome,
+    descrizione: data.description || data.descrizione || '',
+    stato: mapStatusFromBackend(data.status || data.stato),
+    company_id: data.company_id,
+    numero_revisione: data.version || data.numero_revisione || 1,
+    revision_note: data.revision_note,
+    data_creazione: data.created_at || data.data_creazione,
+    data_ultima_modifica: data.updated_at || data.data_ultima_modifica,
+    created_by: data.created_by || "1",
+    updated_by: data.updated_by || "1",
+    files: data.files?.map(mapFileFromBackend) || []
   };
 }
 
-/**
- * Mappa una versione dal formato backend a quello frontend
- */
-function mapVersionFromBackend(backendVersion: any): DVRVersion {
+function mapFileFromBackend(file: any): FileMetadata {
   return {
-    id: backendVersion.id,
-    dvr_id: backendVersion.dvr_id?.toString(),
-    version: backendVersion.version,
-    nome: backendVersion.title,
-    descrizione: backendVersion.description || null,
-    stato: (backendVersion.status || 'BOZZA') as DVRStatus,
-    revision_note: backendVersion.note || backendVersion.revision_note || null,
-    created_at: backendVersion.created_at,
-    updated_at: backendVersion.updated_at,
+    id: file.id,
+    dvr_id: file.dvr_id,
+    file_name: file.file_name || file.name,
+    risk_id: file.risk_id || 1,
+    include: file.include !== undefined ? file.include : true,
+    notes: file.notes || '',
+    classification_result: file.classification_result,
+    extraction_data: file.extraction_data,
+    risk: file.risk || { id: 1, code: "RS001", name: "Rischio generico", status: "active" },
+    created_at: file.created_at,
+    updated_at: file.updated_at
   };
+}
+
+function mapVersionFromBackend(version: any): DVRVersion {
+  return {
+    id: version.id,
+    dvr_id: version.dvr_id,
+    version: version.version_number || version.version,
+    nome: version.nome || version.title || '',
+    descrizione: version.descrizione || version.description || null,
+    stato: mapStatusFromBackend(version.stato || version.status),
+    revision_note: version.revision_note || version.note || null,
+    created_at: version.created_at,
+    updated_at: version.updated_at
+  };
+}
+
+function mapStatusFromBackend(status: string): DVRStatus {
+  const statusMap: Record<string, DVRStatus> = {
+    'draft': 'BOZZA',
+    'DRAFT': 'BOZZA',
+    'bozza': 'BOZZA',
+    'BOZZA': 'BOZZA',
+    'in_review': 'IN_REVISIONE',
+    'IN_REVIEW': 'IN_REVISIONE',
+    'in_revisione': 'IN_REVISIONE',
+    'IN_REVISIONE': 'IN_REVISIONE',
+    'in_approvazione': 'IN_APPROVAZIONE',
+    'IN_APPROVAZIONE': 'IN_APPROVAZIONE',
+    'approved': 'APPROVATO',
+    'APPROVED': 'APPROVATO',
+    'approvato': 'APPROVATO',
+    'APPROVATO': 'APPROVATO',
+    'finalized': 'FINALIZZATO',
+    'FINALIZED': 'FINALIZZATO',
+    'finalizzato': 'FINALIZZATO',
+    'FINALIZZATO': 'FINALIZZATO',
+    'archived': 'ARCHIVIATO',
+    'ARCHIVED': 'ARCHIVIATO',
+    'archiviato': 'ARCHIVIATO',
+    'ARCHIVIATO': 'ARCHIVIATO'
+  };
+  return statusMap[status] || 'BOZZA';
 }

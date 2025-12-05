@@ -1,6 +1,69 @@
 import { RiskType, OutputField, RiskVersion } from '@/types/risk';
 
+// DEMO MODE
+const DEMO_MODE = true;
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
+// Mock data
+let mockRisks: RiskType[] = [
+  {
+    id: "1",
+    uuid: "risk-001",
+    name: "Rischio Chimico",
+    description: "Valutazione del rischio chimico per esposizione a sostanze pericolose",
+    status: "active",
+    inputExpectations: "Schede di sicurezza SDS, elenco sostanze utilizzate, quantità e frequenza di utilizzo",
+    outputStructure: [
+      { name: "sostanza", type: "string", required: true, description: "Nome della sostanza chimica" },
+      { name: "livello_rischio", type: "string", required: true, description: "Livello di rischio (Basso/Medio/Alto)" },
+      { name: "misure_prevenzione", type: "array", required: true, description: "Elenco misure di prevenzione" },
+      { name: "dpi_necessari", type: "array", required: false, description: "DPI necessari" }
+    ],
+    aiPrompt: "Analizza il documento fornito ed estrai le informazioni relative al rischio chimico. Identifica le sostanze chimiche presenti, valuta il livello di rischio e suggerisci le misure di prevenzione appropriate. Restituisci i dati in formato JSON.",
+    version: 1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "2",
+    uuid: "risk-002",
+    name: "Rischio Biologico",
+    description: "Valutazione del rischio biologico per esposizione ad agenti biologici",
+    status: "active",
+    inputExpectations: "Protocolli di sicurezza, procedure di disinfezione, registro esposizioni",
+    outputStructure: [
+      { name: "agente_biologico", type: "string", required: true, description: "Tipo di agente biologico" },
+      { name: "classe_rischio", type: "number", required: true, description: "Classe di rischio (1-4)" },
+      { name: "procedure_sicurezza", type: "array", required: true, description: "Procedure di sicurezza" }
+    ],
+    aiPrompt: "Analizza il documento ed estrai informazioni sul rischio biologico. Identifica gli agenti biologici, la classe di rischio e le procedure di sicurezza. Restituisci in JSON.",
+    version: 1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "3",
+    uuid: "risk-003",
+    name: "Rischio Ergonomico",
+    description: "Valutazione del rischio da movimentazione manuale dei carichi e posture",
+    status: "active",
+    inputExpectations: "Schede mansioni, valutazioni NIOSH, analisi postazioni di lavoro",
+    outputStructure: [
+      { name: "attivita", type: "string", required: true, description: "Attività lavorativa" },
+      { name: "indice_rischio", type: "number", required: true, description: "Indice di rischio" },
+      { name: "interventi", type: "array", required: false, description: "Interventi migliorativi" }
+    ],
+    aiPrompt: "Analizza il documento per il rischio ergonomico. Estrai le attività, calcola l'indice di rischio e suggerisci interventi. Formato JSON.",
+    version: 1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
+let mockRiskIdCounter = 4;
+
+const simulateDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Backend API response types
 interface BackendRisk {
@@ -17,9 +80,6 @@ interface BackendRisk {
   created_at: string;
   updated_at: string;
 }
-
-// Backend and frontend use the same status values now
-// No mapping needed anymore
 
 // Convert backend risk to frontend format
 const mapBackendRiskToFrontend = (backendRisk: BackendRisk): RiskType => {
@@ -54,6 +114,11 @@ const mapFrontendRiskToBackend = (risk: Partial<RiskType>) => {
 };
 
 export const getRiskTypes = async (): Promise<RiskType[]> => {
+  if (DEMO_MODE) {
+    await simulateDelay(300);
+    return [...mockRisks];
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/api/risks`);
     if (!response.ok) {
@@ -68,6 +133,11 @@ export const getRiskTypes = async (): Promise<RiskType[]> => {
 };
 
 export const getRiskTypeById = async (id: string): Promise<RiskType | null> => {
+  if (DEMO_MODE) {
+    await simulateDelay(200);
+    return mockRisks.find(r => r.id === id) || null;
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/api/risks/${id}`);
     if (!response.ok) {
@@ -85,10 +155,37 @@ export const getRiskTypeById = async (id: string): Promise<RiskType | null> => {
 };
 
 export const saveRiskType = async (risk: RiskType): Promise<RiskType> => {
+  if (DEMO_MODE) {
+    await simulateDelay(400);
+    
+    if (risk.id && risk.id !== 'new') {
+      const index = mockRisks.findIndex(r => r.id === risk.id);
+      if (index !== -1) {
+        mockRisks[index] = {
+          ...risk,
+          version: mockRisks[index].version + 1,
+          updatedAt: new Date().toISOString()
+        };
+        return mockRisks[index];
+      }
+    }
+    
+    // Create new
+    const newRisk: RiskType = {
+      ...risk,
+      id: (mockRiskIdCounter++).toString(),
+      uuid: `risk-${Date.now()}`,
+      version: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    mockRisks.push(newRisk);
+    return newRisk;
+  }
+
   try {
     const backendRisk = mapFrontendRiskToBackend(risk);
     
-    // If risk has an id, update it
     if (risk.id && risk.id !== 'new') {
       const response = await fetch(`${API_BASE_URL}/api/risks/${risk.id}`, {
         method: 'PUT',
@@ -105,7 +202,6 @@ export const saveRiskType = async (risk: RiskType): Promise<RiskType> => {
       const data = await response.json();
       return mapBackendRiskToFrontend(data);
     } else {
-      // Create new risk
       const response = await fetch(`${API_BASE_URL}/api/risks`, {
         method: 'POST',
         headers: {
@@ -128,6 +224,12 @@ export const saveRiskType = async (risk: RiskType): Promise<RiskType> => {
 };
 
 export const deleteRiskType = async (id: string): Promise<void> => {
+  if (DEMO_MODE) {
+    await simulateDelay(300);
+    mockRisks = mockRisks.filter(r => r.id !== id);
+    return;
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/api/risks/${id}`, {
       method: 'DELETE',
@@ -143,6 +245,26 @@ export const deleteRiskType = async (id: string): Promise<void> => {
 };
 
 export const getRiskVersions = async (riskId: string): Promise<RiskVersion[]> => {
+  if (DEMO_MODE) {
+    await simulateDelay(200);
+    const risk = mockRisks.find(r => r.id === riskId);
+    if (!risk) return [];
+    
+    return [{
+      id: 1,
+      risk_id: parseInt(riskId),
+      version: risk.version,
+      name: risk.name,
+      description: risk.description,
+      content_expectations: risk.inputExpectations,
+      output_structure: risk.outputStructure,
+      prompt: risk.aiPrompt,
+      state: 'published' as const,
+      created_at: risk.createdAt,
+      updated_at: risk.updatedAt
+    }];
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/api/risks/${riskId}/versions`);
     if (!response.ok) {
@@ -157,6 +279,13 @@ export const getRiskVersions = async (riskId: string): Promise<RiskVersion[]> =>
 };
 
 export const revertRiskToVersion = async (riskId: string, version: number): Promise<RiskType> => {
+  if (DEMO_MODE) {
+    await simulateDelay(300);
+    const risk = mockRisks.find(r => r.id === riskId);
+    if (!risk) throw new Error('Risk not found');
+    return risk;
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/api/risks/${riskId}/revert/${version}`, {
       method: 'POST',
