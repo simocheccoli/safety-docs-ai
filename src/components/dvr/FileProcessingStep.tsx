@@ -22,33 +22,57 @@ interface ProcessingStatus {
   extractedData?: any;
 }
 
-// Mock data per la demo
+// Mock data per la demo - Rischio Fonometrico
 const MOCK_EXTRACTION_RESULTS: Record<string, any> = {
-  default: {
-    azienda: "Bio5 S.r.l.",
-    data_documento: "2024-01-15",
-    tipologia: "Certificazione Sicurezza",
-    validita: "2025-01-15",
-    responsabile: "Mario Rossi",
-    note: "Documento conforme alle normative vigenti"
-  },
   positivo: {
-    azienda: "Bio5 S.r.l.",
-    data_valutazione: "2024-03-10",
-    rischio_identificato: "Rischio chimico - esposizione a solventi",
-    livello_rischio: "Medio",
-    misure_prevenzione: ["DPI specifici", "Ventilazione adeguata", "Formazione periodica"],
-    scadenza_revisione: "2025-03-10",
-    responsabile_sicurezza: "Dott. Giovanni Bianchi",
-    conforme: true
+    postazione_lavoro: "Reparto Produzione - Linea 1",
+    livello_esposizione_leq: 87.5,
+    livello_esposizione_lex8h: 84.2,
+    livello_picco: 132.0,
+    classe_rischio: "Alto",
+    superamento_limiti: false,
+    mansioni_esposte: [
+      "Operatore macchine CNC",
+      "Addetto assemblaggio",
+      "Carrellista"
+    ],
+    sorgenti_rumore: [
+      "Torni CNC (85 dB)",
+      "Compressore aria (92 dB)",
+      "Avvitatori pneumatici (88 dB)",
+      "Nastro trasportatore (78 dB)"
+    ],
+    dpi_uditivi: [
+      "Inserti auricolari 3M 1100 (SNR 37 dB)",
+      "Cuffie antirumore Peltor X4A (SNR 33 dB)"
+    ],
+    misure_prevenzione: [
+      "Installazione cabine fonoisolanti per torni",
+      "Manutenzione programmata compressore",
+      "Rotazione personale ogni 4 ore",
+      "Segnaletica aree ad alto rumore",
+      "Formazione annuale rischio rumore"
+    ],
+    sorveglianza_sanitaria: true,
+    formazione_richiesta: true,
+    data_misurazione: "2024-11-15",
+    tecnico_competente: "Ing. Marco Verdi - Albo n. 1234",
+    strumentazione: "Fonometro Classe 1 - Bruel & Kjaer 2250",
+    normativa_riferimento: "D.Lgs. 81/2008 - Titolo VIII Capo II"
   },
   negativo: {
-    azienda: "Bio5 S.r.l.",
-    data_valutazione: "2024-02-20",
-    rischio_identificato: "Non identificato",
-    livello_rischio: null,
+    postazione_lavoro: "Area non identificata",
+    livello_esposizione_leq: null,
+    livello_esposizione_lex8h: null,
+    classe_rischio: "Non determinabile",
+    superamento_limiti: null,
+    mansioni_esposte: [],
+    sorgenti_rumore: [],
+    dpi_uditivi: [],
     misure_prevenzione: [],
-    note: "Documento incompleto - mancano informazioni essenziali",
+    sorveglianza_sanitaria: null,
+    formazione_richiesta: null,
+    note: "Documento incompleto - mancano dati fonometrici essenziali. Necessaria nuova misurazione.",
     conforme: false
   }
 };
