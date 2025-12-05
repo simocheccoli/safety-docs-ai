@@ -10,6 +10,32 @@ let mockRisks: RiskType[] = [
   {
     id: "1",
     uuid: "risk-001",
+    name: "Rischio Fonometrico",
+    description: "Valutazione del rischio rumore per esposizione a livelli sonori elevati negli ambienti di lavoro",
+    status: "active",
+    inputExpectations: "Misurazioni fonometriche, dati di esposizione al rumore (Lex,8h), tempi di esposizione, tipologia di macchinari e attrezzature rumorose, DPI uditivi in uso",
+    outputStructure: [
+      { name: "postazione_lavoro", type: "string", required: true, description: "Identificativo della postazione o area di lavoro" },
+      { name: "livello_esposizione_leq", type: "number", required: true, description: "Livello equivalente di pressione sonora LEQ in dB(A)" },
+      { name: "livello_esposizione_lex8h", type: "number", required: true, description: "Livello di esposizione giornaliera Lex,8h in dB(A)" },
+      { name: "livello_picco", type: "number", required: false, description: "Livello di picco Lpeak in dB(C)" },
+      { name: "classe_rischio", type: "string", required: true, description: "Classificazione rischio (Trascurabile/Basso/Medio/Alto/Molto Alto)" },
+      { name: "superamento_limiti", type: "boolean", required: true, description: "Indica se vengono superati i valori limite di esposizione" },
+      { name: "mansioni_esposte", type: "array", required: true, description: "Elenco delle mansioni esposte al rischio" },
+      { name: "sorgenti_rumore", type: "array", required: true, description: "Elenco delle principali sorgenti di rumore" },
+      { name: "dpi_uditivi", type: "array", required: true, description: "DPI uditivi raccomandati (cuffie, inserti, ecc.)" },
+      { name: "misure_prevenzione", type: "array", required: true, description: "Misure tecniche e organizzative di prevenzione" },
+      { name: "sorveglianza_sanitaria", type: "boolean", required: true, description: "Necessità di sorveglianza sanitaria" },
+      { name: "formazione_richiesta", type: "boolean", required: true, description: "Necessità di formazione specifica" }
+    ],
+    aiPrompt: "Analizza il documento fornito relativo alla valutazione del rischio rumore. Estrai i dati delle misurazioni fonometriche, identifica i livelli di esposizione LEQ e Lex,8h per ogni postazione di lavoro, classifica il livello di rischio secondo i limiti del D.Lgs. 81/2008 (valore inferiore di azione 80 dB(A), valore superiore di azione 85 dB(A), valore limite 87 dB(A)). Identifica le mansioni esposte, le sorgenti di rumore principali e indica i DPI uditivi necessari e le misure di prevenzione. Restituisci i dati in formato JSON strutturato.",
+    version: 1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "2",
+    uuid: "risk-002",
     name: "Rischio Chimico",
     description: "Valutazione del rischio chimico per esposizione a sostanze pericolose",
     status: "active",
@@ -26,8 +52,8 @@ let mockRisks: RiskType[] = [
     updatedAt: new Date().toISOString()
   },
   {
-    id: "2",
-    uuid: "risk-002",
+    id: "3",
+    uuid: "risk-003",
     name: "Rischio Biologico",
     description: "Valutazione del rischio biologico per esposizione ad agenti biologici",
     status: "active",
@@ -43,8 +69,8 @@ let mockRisks: RiskType[] = [
     updatedAt: new Date().toISOString()
   },
   {
-    id: "3",
-    uuid: "risk-003",
+    id: "4",
+    uuid: "risk-004",
     name: "Rischio Ergonomico",
     description: "Valutazione del rischio da movimentazione manuale dei carichi e posture",
     status: "active",
@@ -61,7 +87,7 @@ let mockRisks: RiskType[] = [
   }
 ];
 
-let mockRiskIdCounter = 4;
+let mockRiskIdCounter = 5;
 
 const simulateDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
