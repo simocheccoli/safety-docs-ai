@@ -22,58 +22,100 @@ interface ProcessingStatus {
   extractedData?: any;
 }
 
-// Mock data per la demo - Rischio Fonometrico
-const MOCK_EXTRACTION_RESULTS: Record<string, any> = {
-  positivo: {
-    postazione_lavoro: "Reparto Produzione - Linea 1",
-    livello_esposizione_leq: 87.5,
-    livello_esposizione_lex8h: 84.2,
-    livello_picco: 132.0,
-    classe_rischio: "Alto",
-    superamento_limiti: false,
-    mansioni_esposte: [
-      "Operatore macchine CNC",
-      "Addetto assemblaggio",
-      "Carrellista"
-    ],
-    sorgenti_rumore: [
-      "Torni CNC (85 dB)",
-      "Compressore aria (92 dB)",
-      "Avvitatori pneumatici (88 dB)",
-      "Nastro trasportatore (78 dB)"
-    ],
-    dpi_uditivi: [
-      "Inserti auricolari 3M 1100 (SNR 37 dB)",
-      "Cuffie antirumore Peltor X4A (SNR 33 dB)"
-    ],
-    misure_prevenzione: [
-      "Installazione cabine fonoisolanti per torni",
-      "Manutenzione programmata compressore",
-      "Rotazione personale ogni 4 ore",
-      "Segnaletica aree ad alto rumore",
-      "Formazione annuale rischio rumore"
-    ],
-    sorveglianza_sanitaria: true,
-    formazione_richiesta: true,
-    data_misurazione: "2024-11-15",
-    tecnico_competente: "Ing. Marco Verdi - Albo n. 1234",
-    strumentazione: "Fonometro Classe 1 - Bruel & Kjaer 2250",
-    normativa_riferimento: "D.Lgs. 81/2008 - Titolo VIII Capo II"
+// Mock data per la demo - diversi tipi di rischio
+const MOCK_EXTRACTION_RESULTS: Record<string, { positivo: any; negativo: any }> = {
+  fonometrico: {
+    positivo: {
+      postazione_lavoro: "Reparto Produzione - Linea 1",
+      livello_esposizione_leq: 87.5,
+      livello_esposizione_lex8h: 84.2,
+      livello_picco: 132.0,
+      classe_rischio: "Alto",
+      superamento_limiti: false,
+      mansioni_esposte: [
+        "Operatore macchine CNC",
+        "Addetto assemblaggio",
+        "Carrellista"
+      ],
+      sorgenti_rumore: [
+        "Torni CNC (85 dB)",
+        "Compressore aria (92 dB)",
+        "Avvitatori pneumatici (88 dB)",
+        "Nastro trasportatore (78 dB)"
+      ],
+      dpi_uditivi: [
+        "Inserti auricolari 3M 1100 (SNR 37 dB)",
+        "Cuffie antirumore Peltor X4A (SNR 33 dB)"
+      ],
+      misure_prevenzione: [
+        "Installazione cabine fonoisolanti per torni",
+        "Manutenzione programmata compressore",
+        "Rotazione personale ogni 4 ore",
+        "Segnaletica aree ad alto rumore",
+        "Formazione annuale rischio rumore"
+      ],
+      sorveglianza_sanitaria: true,
+      formazione_richiesta: true,
+      data_misurazione: "2024-11-15",
+      tecnico_competente: "Ing. Marco Verdi - Albo n. 1234",
+      strumentazione: "Fonometro Classe 1 - Bruel & Kjaer 2250",
+      normativa_riferimento: "D.Lgs. 81/2008 - Titolo VIII Capo II"
+    },
+    negativo: {
+      postazione_lavoro: "Area non identificata",
+      livello_esposizione_leq: null,
+      classe_rischio: "Non determinabile",
+      note: "Documento incompleto - mancano dati fonometrici. Necessaria nuova misurazione.",
+      conforme: false
+    }
   },
-  negativo: {
-    postazione_lavoro: "Area non identificata",
-    livello_esposizione_leq: null,
-    livello_esposizione_lex8h: null,
-    classe_rischio: "Non determinabile",
-    superamento_limiti: null,
-    mansioni_esposte: [],
-    sorgenti_rumore: [],
-    dpi_uditivi: [],
-    misure_prevenzione: [],
-    sorveglianza_sanitaria: null,
-    formazione_richiesta: null,
-    note: "Documento incompleto - mancano dati fonometrici essenziali. Necessaria nuova misurazione.",
-    conforme: false
+  chimico: {
+    positivo: {
+      sostanza: "Acetone industriale",
+      livello_rischio: "Medio",
+      misure_prevenzione: ["DPI specifici", "Ventilazione adeguata", "Formazione periodica"],
+      dpi_necessari: ["Guanti nitrile", "Occhiali protettivi", "Maschera FFP2"]
+    },
+    negativo: {
+      sostanza: "Non identificata",
+      livello_rischio: null,
+      note: "Documento incompleto - mancano schede SDS"
+    }
+  },
+  biologico: {
+    positivo: {
+      agente_biologico: "Batteri Gram-negativi",
+      classe_rischio: 2,
+      procedure_sicurezza: ["Disinfezione superfici", "DPI barriera", "Vaccinazione raccomandata"]
+    },
+    negativo: {
+      agente_biologico: "Non identificato",
+      classe_rischio: null,
+      note: "Protocolli non conformi"
+    }
+  },
+  ergonomico: {
+    positivo: {
+      attivita: "Movimentazione manuale carichi",
+      indice_rischio: 2.8,
+      interventi: ["Ausili meccanici", "Formazione posturale", "Rotazione mansioni"]
+    },
+    negativo: {
+      attivita: "Non valutabile",
+      indice_rischio: null,
+      note: "Dati insufficienti per valutazione NIOSH"
+    }
+  }
+};
+
+// Mappa risk_id a tipo di mock
+const getRiskMockType = (riskId: number): string => {
+  switch (riskId) {
+    case 1: return 'fonometrico';
+    case 2: return 'chimico';
+    case 3: return 'biologico';
+    case 4: return 'ergonomico';
+    default: return 'fonometrico';
   }
 };
 
@@ -91,16 +133,20 @@ export function FileProcessingStep({ files, dvrId, onComplete, onBack }: FilePro
 
   const simulateDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  const processMockFile = async (fileName: string, index: number): Promise<{ result: 'POSITIVO' | 'NEGATIVO'; data: any }> => {
+  const processMockFile = async (file: FileWithClassification, index: number): Promise<{ result: 'POSITIVO' | 'NEGATIVO'; data: any }> => {
     // Simula elaborazione con delay realistici
     await simulateDelay(800 + Math.random() * 500);
     
     // Alterna risultati per demo (più positivi che negativi)
     const isPositive = index % 3 !== 2; // 2/3 positivi, 1/3 negativi
     
+    // Usa il tipo di rischio dal file classificato
+    const riskType = getRiskMockType(file.metadata.risk_id);
+    const mockData = MOCK_EXTRACTION_RESULTS[riskType] || MOCK_EXTRACTION_RESULTS.fonometrico;
+    
     return {
       result: isPositive ? 'POSITIVO' : 'NEGATIVO',
-      data: isPositive ? MOCK_EXTRACTION_RESULTS.positivo : MOCK_EXTRACTION_RESULTS.negativo
+      data: isPositive ? mockData.positivo : mockData.negativo
     };
   };
 
@@ -134,7 +180,7 @@ export function FileProcessingStep({ files, dvrId, onComplete, onBack }: FilePro
           idx === i ? { ...s, message: 'Elaborazione AI in corso...' } : s
         ));
         
-        const aiResult = await processMockFile(file.name, i);
+        const aiResult = await processMockFile(fileWithClass, i);
 
         setStatuses(prev => prev.map((s, idx) => 
           idx === i ? { ...s, message: 'Salvataggio risultati...' } : s
