@@ -1,16 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, FileSpreadsheet, Download, Archive, Building2, Calendar, FileText, FolderUp, Briefcase, Building, User } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, FileSpreadsheet, Download, Archive, Building2, Calendar, FileText, FolderUp, Briefcase, Building, User, ChevronDown, ChevronRight, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,13 +14,24 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { Elaboration, ElaborationUpload } from "@/types/elaboration";
+import { Elaboration, ElaborationUpload, ElaborationFile } from "@/types/elaboration";
 import { 
   fetchElaborationById, 
   fetchElaborationUploads, 
@@ -52,6 +55,8 @@ export default function SafetySheetDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [uploadToDelete, setUploadToDelete] = useState<number | null>(null);
   const [generatingExcel, setGeneratingExcel] = useState(false);
+  const [expandedUploads, setExpandedUploads] = useState<Set<number>>(new Set());
+  const [previewFile, setPreviewFile] = useState<ElaborationFile | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -159,6 +164,18 @@ export default function SafetySheetDetail() {
     toast({
       title: "Download avviato",
       description: "Il file ZIP verrà scaricato a breve",
+    });
+  };
+
+  const toggleUploadExpansion = (uploadId: number) => {
+    setExpandedUploads(prev => {
+      const next = new Set(prev);
+      if (next.has(uploadId)) {
+        next.delete(uploadId);
+      } else {
+        next.add(uploadId);
+      }
+      return next;
     });
   };
 
@@ -319,13 +336,13 @@ export default function SafetySheetDetail() {
           </Card>
         </div>
 
-        {/* Uploads Table */}
+        {/* Uploads List */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Caricamenti</CardTitle>
               <CardDescription>
-                Elenco dei caricamenti suddivisi per mansione, reparto e ruolo
+                Elenco dei caricamenti suddivisi per mansione, reparto e ruolo. Clicca su un caricamento per vedere gli allegati.
               </CardDescription>
             </div>
             <Button onClick={() => setUploadDialogOpen(true)} variant="outline" className="gap-2">
@@ -341,84 +358,117 @@ export default function SafetySheetDetail() {
                 <p className="text-sm mt-1">Aggiungi un nuovo caricamento per iniziare</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30">
-                    <TableHead className="font-medium text-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <Briefcase className="h-3.5 w-3.5" />
-                        Mansione
-                      </div>
-                    </TableHead>
-                    <TableHead className="font-medium text-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <Building className="h-3.5 w-3.5" />
-                        Reparto
-                      </div>
-                    </TableHead>
-                    <TableHead className="font-medium text-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <User className="h-3.5 w-3.5" />
-                        Ruolo
-                      </div>
-                    </TableHead>
-                    <TableHead className="font-medium text-foreground">Allegati</TableHead>
-                    <TableHead className="font-medium text-foreground">Stato</TableHead>
-                    <TableHead className="font-medium text-foreground">Data</TableHead>
-                    <TableHead className="text-right font-medium text-foreground">Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {uploads.map((upload) => (
-                    <TableRow key={upload.id} className="hover:bg-muted/20">
-                      <TableCell className="font-medium">{upload.mansione}</TableCell>
-                      <TableCell>{upload.reparto}</TableCell>
-                      <TableCell>{upload.ruolo}</TableCell>
-                      <TableCell>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center gap-1.5 cursor-help">
-                              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span>{upload.files.length} file</span>
+              <div className="space-y-3">
+                {uploads.map((upload) => {
+                  const isExpanded = expandedUploads.has(upload.id);
+                  return (
+                    <Collapsible
+                      key={upload.id}
+                      open={isExpanded}
+                      onOpenChange={() => toggleUploadExpansion(upload.id)}
+                    >
+                      <div className="border rounded-lg overflow-hidden">
+                        <CollapsibleTrigger asChild>
+                          <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors">
+                            <div className="flex items-center gap-4 flex-1">
+                              <div className="text-muted-foreground">
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </div>
+                              <div className="flex items-center gap-6 flex-1">
+                                <div className="min-w-[140px]">
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-0.5">
+                                    <Briefcase className="h-3 w-3" />
+                                    Mansione
+                                  </div>
+                                  <div className="font-medium">{upload.mansione}</div>
+                                </div>
+                                <div className="min-w-[120px]">
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-0.5">
+                                    <Building className="h-3 w-3" />
+                                    Reparto
+                                  </div>
+                                  <div className="font-medium">{upload.reparto}</div>
+                                </div>
+                                <div className="min-w-[100px]">
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-0.5">
+                                    <User className="h-3 w-3" />
+                                    Ruolo
+                                  </div>
+                                  <div className="font-medium">{upload.ruolo}</div>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm font-medium">{upload.files.length} allegati</span>
+                                </div>
+                                <div>{getStatusBadge(upload.status)}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {formatDate(upload.created_at)}
+                                </div>
+                              </div>
                             </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="right" className="max-w-xs">
-                            <div className="space-y-1">
+                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDeleteClick(upload.id)}
+                                    className="hover:bg-destructive/10"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive/70" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Elimina caricamento</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </div>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="border-t bg-muted/20 p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                               {upload.files.map((file) => (
-                                <div key={file.id} className="text-xs flex justify-between gap-4">
-                                  <span className="truncate">{file.filename}</span>
-                                  <span className="text-muted-foreground">{formatFileSize(file.size)}</span>
+                                <div
+                                  key={file.id}
+                                  className="flex items-center gap-3 p-3 bg-background border rounded-lg hover:border-primary/50 transition-colors group"
+                                >
+                                  <div className="p-2 bg-destructive/10 rounded-lg">
+                                    <FileText className="h-5 w-5 text-destructive" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-sm truncate" title={file.filename}>
+                                      {file.filename}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {formatFileSize(file.size)}
+                                    </div>
+                                  </div>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => setPreviewFile(file)}
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Anteprima PDF</TooltipContent>
+                                  </Tooltip>
                                 </div>
                               ))}
                             </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(upload.status)}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(upload.created_at)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteClick(upload.id)}
-                                className="hover:bg-destructive/10"
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive/70" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Elimina caricamento</TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                          </div>
+                        </CollapsibleContent>
+                      </div>
+                    </Collapsible>
+                  );
+                })}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -450,6 +500,33 @@ export default function SafetySheetDetail() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* PDF Preview Dialog */}
+        <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-destructive" />
+                {previewFile?.filename}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 min-h-[600px] bg-muted/30 rounded-lg overflow-hidden">
+              {previewFile && (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <div className="text-center p-8">
+                    <FileText className="h-16 w-16 mx-auto mb-4 text-destructive/50" />
+                    <p className="font-medium mb-2">{previewFile.filename}</p>
+                    <p className="text-sm mb-4">{formatFileSize(previewFile.size)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      In modalità demo l'anteprima non è disponibile.<br />
+                      In produzione, il PDF verrà visualizzato qui.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );
