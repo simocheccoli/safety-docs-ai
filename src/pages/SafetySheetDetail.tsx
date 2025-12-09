@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, FileSpreadsheet, Download, Archive, Building2, Calendar, FileText, FolderUp, Briefcase, Building, User, ChevronDown, ChevronRight, Eye } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, FileSpreadsheet, Download, Archive, Building2, Calendar, FileText, FolderUp, Briefcase, Building, User, ChevronDown, ChevronRight, Eye, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,11 +14,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Tooltip,
   TooltipContent,
@@ -43,6 +43,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { NewUploadDialog } from "@/components/safety-sheets/NewUploadDialog";
 
+interface FileWithContext extends ElaborationFile {
+  mansione: string;
+  reparto: string;
+  ruolo: string;
+}
+
 export default function SafetySheetDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -56,7 +62,7 @@ export default function SafetySheetDetail() {
   const [uploadToDelete, setUploadToDelete] = useState<number | null>(null);
   const [generatingExcel, setGeneratingExcel] = useState(false);
   const [expandedUploads, setExpandedUploads] = useState<Set<number>>(new Set());
-  const [previewFile, setPreviewFile] = useState<ElaborationFile | null>(null);
+  const [previewFile, setPreviewFile] = useState<FileWithContext | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -452,7 +458,12 @@ export default function SafetySheetDetail() {
                                         variant="ghost"
                                         size="icon"
                                         className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onClick={() => setPreviewFile(file)}
+                                        onClick={() => setPreviewFile({
+                                          ...file,
+                                          mansione: upload.mansione,
+                                          reparto: upload.reparto,
+                                          ruolo: upload.ruolo
+                                        })}
                                       >
                                         <Eye className="h-4 w-4" />
                                       </Button>
@@ -501,16 +512,34 @@ export default function SafetySheetDetail() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* PDF Preview Dialog */}
-        <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-destructive" />
-                {previewFile?.filename}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="flex-1 min-h-[600px] bg-muted/30 rounded-lg overflow-hidden">
+        {/* PDF Preview Sheet */}
+        <Sheet open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
+          <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col p-0">
+            <SheetHeader className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-destructive" />
+                  <span className="truncate">{previewFile?.filename}</span>
+                </SheetTitle>
+              </div>
+              {previewFile && (
+                <div className="flex gap-4 text-sm text-muted-foreground mt-2">
+                  <div className="flex items-center gap-1.5">
+                    <Briefcase className="h-3.5 w-3.5" />
+                    <span>{previewFile.mansione}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Building className="h-3.5 w-3.5" />
+                    <span>{previewFile.reparto}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5" />
+                    <span>{previewFile.ruolo}</span>
+                  </div>
+                </div>
+              )}
+            </SheetHeader>
+            <div className="flex-1 bg-muted/30 overflow-hidden">
               {previewFile && (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <div className="text-center p-8">
@@ -525,8 +554,8 @@ export default function SafetySheetDetail() {
                 </div>
               )}
             </div>
-          </DialogContent>
-        </Dialog>
+          </SheetContent>
+        </Sheet>
       </div>
     </TooltipProvider>
   );

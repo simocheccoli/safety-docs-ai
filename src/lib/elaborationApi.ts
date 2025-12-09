@@ -282,24 +282,90 @@ export async function deleteUpload(uploadId: number): Promise<void> {
   throw new Error('API not implemented');
 }
 
-export async function generateExcel(elaborationId: number): Promise<void> {
+// Payload type for external service
+export interface FilePayload {
+  file_id: number;
+  filename: string;
+  file_path: string;
+  size: number;
+  mansione: string;
+  reparto: string;
+  ruolo: string;
+}
+
+export interface GenerateExcelPayload {
+  elaboration_id: number;
+  elaboration_title: string;
+  company_name: string | null;
+  files: FilePayload[];
+}
+
+export async function generateExcel(elaborationId: number): Promise<GenerateExcelPayload> {
+  const elaboration = mockElaborations.find(e => e.id === elaborationId);
+  const uploads = mockUploads.filter(u => u.elaboration_id === elaborationId);
+  
+  if (!elaboration) {
+    throw new Error('Elaboration not found');
+  }
+
+  // Build the payload with one entry per file including mansione/reparto/ruolo
+  const filesPayload: FilePayload[] = [];
+  
+  for (const upload of uploads) {
+    for (const file of upload.files) {
+      filesPayload.push({
+        file_id: file.id,
+        filename: file.filename,
+        file_path: `/storage/elaborations/${elaborationId}/uploads/${upload.id}/${file.filename}`,
+        size: file.size,
+        mansione: upload.mansione,
+        reparto: upload.reparto,
+        ruolo: upload.ruolo,
+      });
+    }
+  }
+
+  const payload: GenerateExcelPayload = {
+    elaboration_id: elaborationId,
+    elaboration_title: elaboration.title,
+    company_name: elaboration.company_name,
+    files: filesPayload,
+  };
+
   if (DEMO_MODE) {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    const elaboration = mockElaborations.find(e => e.id === elaborationId);
-    if (elaboration) {
-      elaboration.status = 'elaborating';
+    
+    // Log the payload that would be sent
+    console.log('📤 POST payload per servizio esterno:', JSON.stringify(payload, null, 2));
+    
+    elaboration.status = 'elaborating';
+    elaboration.updated_at = new Date().toISOString();
+    
+    // Simulate processing completion after 3 seconds
+    setTimeout(() => {
+      elaboration.status = 'completed';
+      elaboration.end_process = new Date().toISOString();
       elaboration.updated_at = new Date().toISOString();
-      
-      // Simulate processing completion after 3 seconds
-      setTimeout(() => {
-        elaboration.status = 'completed';
-        elaboration.end_process = new Date().toISOString();
-        elaboration.updated_at = new Date().toISOString();
-      }, 3000);
-    }
-    return;
+    }, 3000);
+    
+    return payload;
   }
-  throw new Error('API not implemented');
+
+  // In production, make the actual HTTP POST call
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+  const response = await fetch(`${API_BASE_URL}/api/elaborations/generate-excel`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to generate Excel');
+  }
+
+  return payload;
 }
 
 export function downloadExcel(id: number): void {
