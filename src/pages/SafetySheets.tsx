@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { Plus, Download, Eye, Trash2, Archive, X, Calendar, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Plus, Eye, Trash2, Calendar, ArrowUpDown, ArrowUp, ArrowDown, X, Building2, FileText, FolderUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { NewElaborationDialog } from "@/components/NewElaborationDialog";
-import { ElaborationDetailsDialog } from "@/components/ElaborationDetailsDialog";
 import { Elaboration } from "@/types/elaboration";
 import {
   Table,
@@ -45,14 +44,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { fetchElaborations, deleteElaboration, downloadExcel, downloadZip, createElaboration } from "@/lib/api";
+import { fetchElaborations, deleteElaboration } from "@/lib/elaborationApi";
 import { useToast } from "@/hooks/use-toast";
 import { DatePicker } from "@/components/ui/date-picker";
+import { NewSafetySheetDialog } from "@/components/safety-sheets/NewSafetySheetDialog";
 
-type SortField = 'title' | 'status' | 'begin_process';
+type SortField = 'title' | 'status' | 'begin_process' | 'uploads_count';
 type SortDirection = 'asc' | 'desc' | null;
 
 export default function SafetySheets() {
+  const navigate = useNavigate();
   const [allElaborations, setAllElaborations] = useState<Elaboration[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -60,8 +61,6 @@ export default function SafetySheets() {
   const perPage = 10;
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedElaboration, setSelectedElaboration] = useState<Elaboration | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
@@ -83,7 +82,7 @@ export default function SafetySheets() {
     } catch (error) {
       toast({
         title: "Errore",
-        description: "Impossibile caricare le elaborazioni",
+        description: "Impossibile caricare le schede di sicurezza",
         variant: "destructive",
       });
     } finally {
@@ -91,34 +90,14 @@ export default function SafetySheets() {
     }
   };
 
-  const handleNewElaboration = async (name: string, files: File[]) => {
-    try {
-      await createElaboration(name, files);
-      
-      toast({
-        title: "Elaborazione creata",
-        description: "L'elaborazione è stata avviata con successo",
-      });
-
-      await loadElaborations();
-      setDialogOpen(false);
-      setCurrentPage(1);
-    } catch (error) {
-      toast({
-        title: "Errore",
-        description: "Impossibile creare l'elaborazione",
-        variant: "destructive",
-      });
-    }
+  const handleNewElaboration = () => {
+    loadElaborations();
+    setDialogOpen(false);
+    setCurrentPage(1);
   };
 
   const handleViewDetails = (elaboration: Elaboration) => {
-    setSelectedElaboration(elaboration);
-    setDetailsDialogOpen(true);
-  };
-
-  const handleTitleUpdate = () => {
-    loadElaborations();
+    navigate(`/safety-sheets/${elaboration.id}`);
   };
 
   const handleDeleteClick = (id: number) => {
@@ -133,35 +112,19 @@ export default function SafetySheets() {
       await deleteElaboration(elaborationToDelete);
       toast({
         title: "Successo",
-        description: "Elaborazione eliminata con successo",
+        description: "Scheda di sicurezza eliminata con successo",
       });
       loadElaborations();
     } catch (error) {
       toast({
         title: "Errore",
-        description: "Impossibile eliminare l'elaborazione",
+        description: "Impossibile eliminare la scheda di sicurezza",
         variant: "destructive",
       });
     } finally {
       setDeleteDialogOpen(false);
       setElaborationToDelete(null);
     }
-  };
-
-  const handleDownloadExcel = (id: number) => {
-    downloadExcel(id);
-    toast({
-      title: "Download avviato",
-      description: "Il file Excel verrà scaricato a breve",
-    });
-  };
-
-  const handleDownloadZip = (id: number) => {
-    downloadZip(id);
-    toast({
-      title: "Download avviato",
-      description: "Il file ZIP verrà scaricato a breve",
-    });
   };
 
   const formatDate = (dateString: string) => {
@@ -176,6 +139,11 @@ export default function SafetySheets() {
 
   const getStatusBadge = (status: string) => {
     const configs = {
+      bozza: { 
+        label: "Bozza", 
+        dotColor: "bg-muted-foreground",
+        textColor: "text-muted-foreground"
+      },
       elaborating: { 
         label: "In elaborazione", 
         dotColor: "bg-warning",
@@ -192,7 +160,7 @@ export default function SafetySheets() {
         textColor: "text-muted-foreground"
       },
     };
-    const config = configs[status as keyof typeof configs];
+    const config = configs[status as keyof typeof configs] || configs.bozza;
     return (
       <div className="flex items-center gap-2">
         <div className={`h-2 w-2 rounded-full ${config.dotColor}`} />
@@ -226,12 +194,12 @@ export default function SafetySheets() {
     return <ArrowDown className="h-4 w-4 ml-1 text-primary" />;
   };
 
-  // Applicazione filtri, ordinamento e paginazione lato frontend
+  // Filtering, sorting, pagination
   let processedElaborations = [...allElaborations];
 
-  // Filtri
   processedElaborations = processedElaborations.filter((elab) => {
-    const matchesSearch = elab.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = elab.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (elab.company_name?.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesStatus = statusFilter === "all" || elab.status === statusFilter;
     
     let matchesDateFrom = true;
@@ -256,7 +224,6 @@ export default function SafetySheets() {
     return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
   });
 
-  // Ordinamento
   if (sortField && sortDirection) {
     processedElaborations.sort((a, b) => {
       let aVal: any = a[sortField];
@@ -266,8 +233,8 @@ export default function SafetySheets() {
         aVal = new Date(aVal).getTime();
         bVal = new Date(bVal).getTime();
       } else if (sortField === 'title' || sortField === 'status') {
-        aVal = aVal.toLowerCase();
-        bVal = bVal.toLowerCase();
+        aVal = (aVal || '').toLowerCase();
+        bVal = (bVal || '').toLowerCase();
       }
 
       if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
@@ -279,7 +246,6 @@ export default function SafetySheets() {
   const totalFiltered = processedElaborations.length;
   const totalPages = Math.ceil(totalFiltered / perPage);
 
-  // Paginazione
   const startIndex = (currentPage - 1) * perPage;
   const paginatedElaborations = processedElaborations.slice(startIndex, startIndex + perPage);
 
@@ -370,291 +336,302 @@ export default function SafetySheets() {
   return (
     <TooltipProvider>
       <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-            Schede di Sicurezza
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Gestione elaborazioni e reportistica
-          </p>
-        </div>
-        <Button 
-          onClick={() => setDialogOpen(true)} 
-          variant="outline"
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Nuova Elaborazione
-        </Button>
-      </div>
-
-      <div className="bg-card border rounded-lg p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Cerca per titolo
-            </label>
-            <Input
-              placeholder="Filtra per titolo..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          
+        <div className="flex items-center justify-between">
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Stato
-            </label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Tutti gli stati" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutti gli stati</SelectItem>
-                <SelectItem value="elaborating">In elaborazione</SelectItem>
-                <SelectItem value="completed">Completato</SelectItem>
-                <SelectItem value="error">Errore</SelectItem>
-              </SelectContent>
-            </Select>
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+              Schede di Sicurezza
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Gestione schede di sicurezza con caricamenti per mansione, reparto e ruolo
+            </p>
           </div>
-
-          <div className="flex items-end">
-            {hasActiveFilters && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={clearFilters}
-                className="w-full gap-2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-                Cancella filtri
-              </Button>
-            )}
-          </div>
+          <Button 
+            onClick={() => setDialogOpen(true)} 
+            variant="outline"
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Nuova Scheda
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" />
-              Data inizio da
-            </label>
-            <DatePicker 
-              date={dateFrom} 
-              onSelect={setDateFrom}
-              placeholder="Seleziona data inizio"
-            />
+        <div className="bg-card border rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-2">
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Cerca per titolo o azienda
+              </label>
+              <Input
+                placeholder="Filtra per titolo o azienda..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Stato
+              </label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti gli stati" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti gli stati</SelectItem>
+                  <SelectItem value="bozza">Bozza</SelectItem>
+                  <SelectItem value="elaborating">In elaborazione</SelectItem>
+                  <SelectItem value="completed">Completato</SelectItem>
+                  <SelectItem value="error">Errore</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-end">
+              {hasActiveFilters && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={clearFilters}
+                  className="w-full gap-2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                  Cancella filtri
+                </Button>
+              )}
+            </div>
           </div>
-          
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" />
-              Data inizio a
-            </label>
-            <DatePicker 
-              date={dateTo} 
-              onSelect={setDateTo}
-              placeholder="Seleziona data fine"
-            />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" />
+                Data creazione da
+              </label>
+              <DatePicker 
+                date={dateFrom} 
+                onSelect={setDateFrom}
+                placeholder="Seleziona data inizio"
+              />
+            </div>
+            
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" />
+                Data creazione a
+              </label>
+              <DatePicker 
+                date={dateTo} 
+                onSelect={setDateTo}
+                placeholder="Seleziona data fine"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="bg-card border rounded-lg overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/30">
-              <TableHead className="font-medium text-foreground">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleSort('title')}
-                  className="h-auto p-0 hover:bg-transparent font-medium"
-                >
-                  Titolo
-                  {getSortIcon('title')}
-                </Button>
-              </TableHead>
-              <TableHead className="font-medium text-foreground">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleSort('status')}
-                  className="h-auto p-0 hover:bg-transparent font-medium"
-                >
-                  Stato
-                  {getSortIcon('status')}
-                </Button>
-              </TableHead>
-              <TableHead className="font-medium text-foreground">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleSort('begin_process')}
-                  className="h-auto p-0 hover:bg-transparent font-medium"
-                >
-                  Data Inizio
-                  {getSortIcon('begin_process')}
-                </Button>
-              </TableHead>
-              <TableHead className="text-right font-medium text-foreground">Azioni</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
-                  Caricamento...
-                </TableCell>
+        <div className="bg-card border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/30">
+                <TableHead className="font-medium text-foreground">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('title')}
+                    className="h-auto p-0 hover:bg-transparent font-medium"
+                  >
+                    Titolo
+                    {getSortIcon('title')}
+                  </Button>
+                </TableHead>
+                <TableHead className="font-medium text-foreground">Azienda</TableHead>
+                <TableHead className="font-medium text-foreground">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('uploads_count')}
+                    className="h-auto p-0 hover:bg-transparent font-medium"
+                  >
+                    Caricamenti
+                    {getSortIcon('uploads_count')}
+                  </Button>
+                </TableHead>
+                <TableHead className="font-medium text-foreground">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('status')}
+                    className="h-auto p-0 hover:bg-transparent font-medium"
+                  >
+                    Stato
+                    {getSortIcon('status')}
+                  </Button>
+                </TableHead>
+                <TableHead className="font-medium text-foreground">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('begin_process')}
+                    className="h-auto p-0 hover:bg-transparent font-medium"
+                  >
+                    Data Creazione
+                    {getSortIcon('begin_process')}
+                  </Button>
+                </TableHead>
+                <TableHead className="text-right font-medium text-foreground">Azioni</TableHead>
               </TableRow>
-            ) : paginatedElaborations.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
-                  Nessuna elaborazione trovata
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginatedElaborations.map((elaboration) => (
-                <TableRow key={elaboration.id} className="hover:bg-muted/20">
-                  <TableCell className="font-medium">{elaboration.title}</TableCell>
-                  <TableCell>{getStatusBadge(elaboration.status)}</TableCell>
-                  <TableCell className="text-muted-foreground">{formatDate(elaboration.begin_process)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1 justify-end">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewDetails(elaboration)}
-                            className="hover:bg-muted"
-                          >
-                            <Eye className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Visualizza schede PDF</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      
-                      {elaboration.status === "completed" && (
-                        <>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDownloadExcel(elaboration.id)}
-                                className="hover:bg-muted"
-                              >
-                                <Download className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Scarica report Excel</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDownloadZip(elaboration.id)}
-                                className="hover:bg-muted"
-                              >
-                                <Archive className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Scarica archivio ZIP delle schede</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </>
-                      )}
-                      
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteClick(elaboration.id)}
-                            className="hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive/70" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Elimina elaborazione</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    Caricamento...
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex justify-center mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious 
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-              
-              {renderPaginationItems()}
-              
-              <PaginationItem>
-                <PaginationNext 
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+              ) : paginatedElaborations.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    Nessuna scheda di sicurezza trovata
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedElaborations.map((elaboration) => (
+                  <TableRow key={elaboration.id} className="hover:bg-muted/20">
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{elaboration.title}</div>
+                        {elaboration.description && (
+                          <div className="text-xs text-muted-foreground truncate max-w-xs">
+                            {elaboration.description}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {elaboration.company_name ? (
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Building2 className="h-3.5 w-3.5" />
+                          <span className="text-sm">{elaboration.company_name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground/50">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <FolderUp className="h-3.5 w-3.5" />
+                              <span className="text-sm font-medium">{elaboration.uploads_count}</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>Caricamenti</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <FileText className="h-3.5 w-3.5" />
+                              <span className="text-sm font-medium">{elaboration.files_count}</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>Allegati totali</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(elaboration.status)}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(elaboration.begin_process)}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1 justify-end">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewDetails(elaboration)}
+                              className="hover:bg-muted"
+                            >
+                              <Eye className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Visualizza dettagli</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteClick(elaboration.id)}
+                              className="hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive/70" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Elimina scheda</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
-      )}
 
-      <NewElaborationDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSubmit={handleNewElaboration}
-      />
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-6">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                
+                {renderPaginationItems()}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
 
-      <ElaborationDetailsDialog
-        open={detailsDialogOpen}
-        onOpenChange={setDetailsDialogOpen}
-        elaboration={selectedElaboration}
-        onTitleUpdate={handleTitleUpdate}
-      />
+        <NewSafetySheetDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          onSuccess={handleNewElaboration}
+        />
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Conferma eliminazione</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sei sicuro di voler eliminare questa elaborazione? Questa azione non può essere annullata e tutti i dati associati verranno rimossi definitivamente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annulla</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Elimina
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Conferma eliminazione</AlertDialogTitle>
+              <AlertDialogDescription>
+                Sei sicuro di voler eliminare questa scheda di sicurezza? Questa azione non può essere annullata e tutti i caricamenti e allegati associati verranno rimossi definitivamente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annulla</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Elimina
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </TooltipProvider>
   );
 }

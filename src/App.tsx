@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import Dashboard from "./pages/Dashboard";
 import SafetySheets from "./pages/SafetySheets";
+import SafetySheetDetail from "./pages/SafetySheetDetail";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Users from "./pages/Users";
@@ -46,6 +47,7 @@ const App = () => {
                           <Routes>
                             <Route path="/" element={<Dashboard />} />
             <Route path="/safety-sheets" element={<SafetySheets />} />
+            <Route path="/safety-sheets/:id" element={<SafetySheetDetail />} />
             <Route path="/companies" element={<Companies />} />
               <Route path="/rischi" element={<RiskManagement />} />
               <Route path="/rischi/:id" element={<RiskDetail />} />
