@@ -489,6 +489,7 @@ export default function SafetySheetDetail() {
           open={uploadDialogOpen}
           onOpenChange={setUploadDialogOpen}
           elaborationId={elaboration.id}
+          companyId={elaboration.company_id}
           onSuccess={handleNewUpload}
         />
 
