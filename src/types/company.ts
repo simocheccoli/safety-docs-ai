@@ -15,6 +15,9 @@ export interface Company {
   rspp?: string;
   doctor?: string;
   consultant?: string;
+  mansioni?: string[];
+  reparti?: string[];
+  ruoli?: string[];
   created_at?: string;
   updated_at?: string;
 }
@@ -35,4 +38,7 @@ export interface CreateCompanyData {
   rspp?: string;
   doctor?: string;
   consultant?: string;
+  mansioni?: string[];
+  reparti?: string[];
+  ruoli?: string[];
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, MapPin, Mail, Phone, User, FileText, Stethoscope, Users } from "lucide-react";
+import { Building2, MapPin, Mail, Phone, User, FileText, Stethoscope, Users, Briefcase, LayoutGrid, UserCog } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { companyApi } from "@/lib/companyApi";
 import { Company, CreateCompanyData } from "@/types/company";
+import { TagListEditor } from "@/components/company/TagListEditor";
 
 interface CompanyEditSheetProps {
   open: boolean;
@@ -44,6 +45,9 @@ export function CompanyEditSheet({
     rspp: '',
     doctor: '',
     consultant: '',
+    mansioni: [],
+    reparti: [],
+    ruoli: [],
   });
 
   useEffect(() => {
@@ -96,6 +100,9 @@ export function CompanyEditSheet({
       rspp: companyData.rspp || '',
       doctor: companyData.doctor || '',
       consultant: companyData.consultant || '',
+      mansioni: companyData.mansioni || [],
+      reparti: companyData.reparti || [],
+      ruoli: companyData.ruoli || [],
     });
   };
 
@@ -117,10 +124,13 @@ export function CompanyEditSheet({
       rspp: '',
       doctor: '',
       consultant: '',
+      mansioni: [],
+      reparti: [],
+      ruoli: [],
     });
   };
 
-  const handleChange = (field: keyof CreateCompanyData, value: string) => {
+  const handleChange = (field: keyof CreateCompanyData, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -395,6 +405,51 @@ export function CompanyEditSheet({
                         onChange={(e) => handleChange('consultant', e.target.value)}
                         placeholder="Studio Associato XYZ"
                         maxLength={255}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Mansioni, Reparti, Ruoli */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Briefcase className="h-4 w-4" />
+                    Classificazione Personale
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Briefcase className="h-3 w-3" />
+                        Mansioni
+                      </Label>
+                      <TagListEditor
+                        values={formData.mansioni || []}
+                        onChange={(values) => handleChange('mansioni', values)}
+                        placeholder="Aggiungi mansione..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <LayoutGrid className="h-3 w-3" />
+                        Reparti
+                      </Label>
+                      <TagListEditor
+                        values={formData.reparti || []}
+                        onChange={(values) => handleChange('reparti', values)}
+                        placeholder="Aggiungi reparto..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <UserCog className="h-3 w-3" />
+                        Ruoli
+                      </Label>
+                      <TagListEditor
+                        values={formData.ruoli || []}
+                        onChange={(values) => handleChange('ruoli', values)}
+                        placeholder="Aggiungi ruolo..."
                       />
                     </div>
                   </div>
