@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,24 +10,45 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createUpload } from "@/lib/elaborationApi";
+import { companyApi } from "@/lib/companyApi";
+import { Company } from "@/types/company";
 
 interface NewUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   elaborationId: number;
+  companyId: number | null;
   onSuccess: () => void;
 }
 
-export function NewUploadDialog({ open, onOpenChange, elaborationId, onSuccess }: NewUploadDialogProps) {
+export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, onSuccess }: NewUploadDialogProps) {
   const [mansione, setMansione] = useState("");
   const [reparto, setReparto] = useState("");
   const [ruolo, setRuolo] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+  const [company, setCompany] = useState<Company | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (open && companyId) {
+      loadCompany();
+    }
+  }, [open, companyId]);
+
+  const loadCompany = async () => {
+    if (!companyId) return;
+    try {
+      const data = await companyApi.getById(companyId);
+      setCompany(data);
+    } catch (error) {
+      console.error("Error loading company:", error);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -55,7 +76,7 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, onSuccess }
     if (!mansione.trim()) {
       toast({
         title: "Errore",
-        description: "Inserisci la mansione",
+        description: "Seleziona la mansione",
         variant: "destructive",
       });
       return;
@@ -64,7 +85,7 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, onSuccess }
     if (!reparto.trim()) {
       toast({
         title: "Errore",
-        description: "Inserisci il reparto",
+        description: "Seleziona il reparto",
         variant: "destructive",
       });
       return;
@@ -73,7 +94,7 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, onSuccess }
     if (!ruolo.trim()) {
       toast({
         title: "Errore",
-        description: "Inserisci il ruolo",
+        description: "Seleziona il ruolo",
         variant: "destructive",
       });
       return;
@@ -128,6 +149,12 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, onSuccess }
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const mansioni = company?.mansioni || [];
+  const reparti = company?.reparti || [];
+  const ruoli = company?.ruoli || [];
+
+  const hasCompanyOptions = mansioni.length > 0 || reparti.length > 0 || ruoli.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[550px]">
@@ -141,32 +168,77 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, onSuccess }
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="mansione">Mansione *</Label>
-              <Input
-                id="mansione"
-                placeholder="Es. Operatore CNC"
-                value={mansione}
-                onChange={(e) => setMansione(e.target.value)}
-              />
+              {mansioni.length > 0 ? (
+                <Select value={mansione} onValueChange={setMansione}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mansioni.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="mansione"
+                  placeholder="Es. Operatore CNC"
+                  value={mansione}
+                  onChange={(e) => setMansione(e.target.value)}
+                />
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="reparto">Reparto *</Label>
-              <Input
-                id="reparto"
-                placeholder="Es. Produzione"
-                value={reparto}
-                onChange={(e) => setReparto(e.target.value)}
-              />
+              {reparti.length > 0 ? (
+                <Select value={reparto} onValueChange={setReparto}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {reparti.map((r) => (
+                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="reparto"
+                  placeholder="Es. Produzione"
+                  value={reparto}
+                  onChange={(e) => setReparto(e.target.value)}
+                />
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="ruolo">Ruolo *</Label>
-              <Input
-                id="ruolo"
-                placeholder="Es. Operaio"
-                value={ruolo}
-                onChange={(e) => setRuolo(e.target.value)}
-              />
+              {ruoli.length > 0 ? (
+                <Select value={ruolo} onValueChange={setRuolo}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ruoli.map((r) => (
+                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="ruolo"
+                  placeholder="Es. Operaio"
+                  value={ruolo}
+                  onChange={(e) => setRuolo(e.target.value)}
+                />
+              )}
             </div>
           </div>
+
+          {!hasCompanyOptions && companyId && (
+            <p className="text-sm text-muted-foreground">
+              Nessuna mansione, reparto o ruolo configurato per questa azienda. Puoi inserirli manualmente o configurarli nelle impostazioni azienda.
+            </p>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="files">Allegati PDF *</Label>
