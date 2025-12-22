@@ -18,6 +18,9 @@ let mockCompanies: Company[] = [
     phone: "02 1234567",
     email: "info@bio5.it",
     pec: "bio5@pec.it",
+    mansioni: ["Operatore Macchine CNC", "Addetto Magazzino", "Responsabile Qualità"],
+    reparti: ["Produzione", "Magazzino", "Qualità", "Amministrazione"],
+    ruoli: ["Operaio Specializzato", "Impiegato", "Responsabile", "Dirigente"],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
@@ -32,6 +35,9 @@ let mockCompanies: Company[] = [
     phone: "06 9876543",
     email: "info@techsolutions.it",
     pec: "techsolutions@pec.it",
+    mansioni: ["Sviluppatore Software", "Sistemista", "Project Manager"],
+    reparti: ["Sviluppo", "IT", "Gestione Progetti"],
+    ruoli: ["Developer", "Senior Developer", "Team Lead", "Manager"],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
