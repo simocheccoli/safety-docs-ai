@@ -1,4 +1,4 @@
-import { Home, FlaskConical, FileText, LogOut, User, Users, Settings, FileCheck, Building2 } from "lucide-react";
+import { Home, FlaskConical, FileText, LogOut, User, Users, Settings, FileCheck, Building2, CalendarClock } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -20,6 +20,7 @@ const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Creazione DVR", url: "/dvr", icon: FileCheck },
   { title: "Aziende", url: "/companies", icon: Building2 },
+  { title: "Scadenziario", url: "/deadlines", icon: CalendarClock },
 ];
 
 const riskItems = [
