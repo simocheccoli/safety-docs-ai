@@ -283,7 +283,7 @@ export const getRiskVersions = async (riskId: string): Promise<RiskVersion[]> =>
       name: risk.name,
       description: risk.description,
       content_expectations: risk.inputExpectations,
-      output_structure: risk.outputStructure,
+      output_structure: Array.isArray(risk.outputStructure) ? risk.outputStructure : [],
       prompt: risk.aiPrompt,
       state: 'published' as const,
       created_at: risk.createdAt,

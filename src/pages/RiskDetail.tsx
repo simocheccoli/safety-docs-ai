@@ -46,7 +46,7 @@ const RiskDetail = () => {
         setDescription(risk.description);
         setStatus(risk.status);
         setInputExpectations(risk.inputExpectations);
-        setOutputStructure(risk.outputStructure);
+        setOutputStructure(Array.isArray(risk.outputStructure) ? risk.outputStructure : []);
         setAiPrompt(risk.aiPrompt);
         setCurrentVersion(risk.version);
       }

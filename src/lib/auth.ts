@@ -1,4 +1,4 @@
-import { User, DEFAULT_USERS } from "@/types/user";
+import { User, DEFAULT_USERS, isUserAdmin } from "@/types/user";
 
 const USERS_KEY = 'hseb5_users';
 const CURRENT_USER_KEY = 'hseb5_current_user';
@@ -21,7 +21,7 @@ export function saveUsers(users: User[]) {
 
 export function login(email: string, password: string): User | null {
   const users = getUsers();
-  const user = users.find(u => u.email === email && u.password === password && u.active);
+  const user = users.find(u => u.email === email && u.password === password && u.active !== false);
   
   if (user) {
     const { password: _, ...userWithoutPassword } = user;
@@ -43,5 +43,5 @@ export function getCurrentUser(): Omit<User, 'password'> | null {
 
 export function isAdmin(): boolean {
   const user = getCurrentUser();
-  return user?.role === 'Admin';
+  return user ? isUserAdmin(user as User) : false;
 }

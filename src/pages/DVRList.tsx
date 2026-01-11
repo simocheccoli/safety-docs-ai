@@ -148,7 +148,7 @@ export default function DVRList() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Annulla</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(dvr.id)}>
+                          <AlertDialogAction onClick={() => handleDelete(String(dvr.id))}>
                             Elimina
                           </AlertDialogAction>
                         </AlertDialogFooter>

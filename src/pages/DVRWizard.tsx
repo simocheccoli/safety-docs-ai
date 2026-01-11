@@ -67,7 +67,7 @@ export default function DVRWizard() {
           
           if (matchingFile && classifiedFile.metadata.risk_id) {
             await dvrApi.updateFile(
-              updatedDVR.id,
+              String(updatedDVR.id),
               matchingFile.id.toString(),
               {
                 risk_id: classifiedFile.metadata.risk_id,
@@ -99,7 +99,7 @@ export default function DVRWizard() {
           
           if (matchingFile && classifiedFile.metadata.risk_id) {
             await dvrApi.updateFile(
-              newDVR.id,
+              String(newDVR.id),
               matchingFile.id.toString(),
               {
                 risk_id: classifiedFile.metadata.risk_id,
