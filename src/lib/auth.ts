@@ -117,7 +117,7 @@ export const userApi = {
       await simulateDelay(400);
       const users = getUsers();
       const newUser: User = {
-        id: Math.max(...users.map(u => u.id)) + 1,
+        id: Math.max(...users.map(u => typeof u.id === 'number' ? u.id : parseInt(u.id as string) || 0)) + 1,
         ...data,
         active: true
       };

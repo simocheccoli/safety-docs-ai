@@ -76,18 +76,16 @@ function mapStatusFromBackend(status: string): DVRStatus {
     'DRAFT': 'BOZZA',
     'bozza': 'BOZZA',
     'BOZZA': 'BOZZA',
-    'in_progress': 'IN_LAVORAZIONE',
-    'IN_PROGRESS': 'IN_LAVORAZIONE',
-    'in_lavorazione': 'IN_LAVORAZIONE',
-    'IN_LAVORAZIONE': 'IN_LAVORAZIONE',
+    'in_progress': 'in_progress',
+    'IN_PROGRESS': 'in_progress',
     'in_review': 'IN_REVISIONE',
     'IN_REVIEW': 'IN_REVISIONE',
     'in_revisione': 'IN_REVISIONE',
     'IN_REVISIONE': 'IN_REVISIONE',
-    'review': 'IN_REVISIONE',
+    'review': 'review',
     'in_approvazione': 'IN_APPROVAZIONE',
     'IN_APPROVAZIONE': 'IN_APPROVAZIONE',
-    'approved': 'APPROVATO',
+    'approved': 'approved',
     'APPROVED': 'APPROVATO',
     'approvato': 'APPROVATO',
     'APPROVATO': 'APPROVATO',
@@ -95,7 +93,7 @@ function mapStatusFromBackend(status: string): DVRStatus {
     'FINALIZED': 'FINALIZZATO',
     'finalizzato': 'FINALIZZATO',
     'FINALIZZATO': 'FINALIZZATO',
-    'archived': 'ARCHIVIATO',
+    'archived': 'archived',
     'ARCHIVED': 'ARCHIVIATO',
     'archiviato': 'ARCHIVIATO',
     'ARCHIVIATO': 'ARCHIVIATO'
@@ -103,15 +101,19 @@ function mapStatusFromBackend(status: string): DVRStatus {
   return statusMap[status] || 'BOZZA';
 }
 
-function mapStatusToBackend(status: DVRStatus): string {
-  const statusMap: Record<DVRStatus, string> = {
+function mapStatusToBackend(status: string): string {
+  const statusMap: Record<string, string> = {
     'BOZZA': 'draft',
-    'IN_LAVORAZIONE': 'in_progress',
+    'draft': 'draft',
+    'in_progress': 'in_progress',
     'IN_REVISIONE': 'review',
+    'review': 'review',
     'IN_APPROVAZIONE': 'review',
     'APPROVATO': 'approved',
+    'approved': 'approved',
     'FINALIZZATO': 'approved',
-    'ARCHIVIATO': 'archived'
+    'ARCHIVIATO': 'archived',
+    'archived': 'archived'
   };
   return statusMap[status] || 'draft';
 }
