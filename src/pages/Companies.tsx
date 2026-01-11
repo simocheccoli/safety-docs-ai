@@ -7,6 +7,7 @@ import { companyApi } from '@/lib/companyApi';
 import { Company } from '@/types/company';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { CompanyEditSheet } from '@/components/CompanyEditSheet';
+import { CompanyGridSkeleton } from '@/components/ui/loading-skeletons';
 
 export default function Companies() {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -66,11 +67,14 @@ export default function Companies() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Caricamento...</p>
+      <div className="container mx-auto py-8 px-4">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">Aziende</h1>
+            <p className="text-muted-foreground">Gestisci le aziende clienti</p>
+          </div>
         </div>
+        <CompanyGridSkeleton items={6} />
       </div>
     );
   }

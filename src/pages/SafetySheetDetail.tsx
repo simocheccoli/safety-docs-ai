@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, FileSpreadsheet, Download, Archive, Building2, Calendar, FileText, FolderUp, Briefcase, Building, User, ChevronDown, ChevronRight, Eye, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DetailPageSkeleton, UploadListSkeleton, StatCardGridSkeleton } from "@/components/ui/loading-skeletons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -214,11 +215,7 @@ export default function SafetySheetDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-muted-foreground">Caricamento...</div>
-      </div>
-    );
+    return <DetailPageSkeleton />;
   }
 
   if (!elaboration) {
