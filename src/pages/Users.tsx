@@ -49,13 +49,13 @@ export default function Users() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [userToDelete, setUserToDelete] = useState<string | number | null>(null);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
-    role: "Tecnico" as "Admin" | "Tecnico",
+    role: "user" as "admin" | "user" | "Admin" | "Tecnico",
     active: true,
   });
 
@@ -75,12 +75,12 @@ export default function Users() {
     if (user) {
       setEditingUser(user);
       setFormData({
-        firstName: user.firstName,
-        lastName: user.lastName,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
         email: user.email,
-        password: user.password,
+        password: user.password || '',
         role: user.role,
-        active: user.active,
+        active: user.active !== false,
       });
     } else {
       setEditingUser(null);
@@ -89,7 +89,7 @@ export default function Users() {
         lastName: "",
         email: "",
         password: "",
-        role: "Tecnico",
+        role: "user",
         active: true,
       });
     }
@@ -131,7 +131,7 @@ export default function Users() {
       }
 
       const newUser: User = {
-        id: Date.now().toString(),
+        id: Date.now(),
         ...formData,
       };
       saveUsers([...allUsers, newUser]);
@@ -145,7 +145,7 @@ export default function Users() {
     setDialogOpen(false);
   };
 
-  const handleDeleteClick = (id: string) => {
+  const handleDeleteClick = (id: string | number) => {
     setUserToDelete(id);
     setDeleteDialogOpen(true);
   };
@@ -214,9 +214,9 @@ export default function Users() {
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    user.role === 'Admin' ? 'bg-primary/10 text-primary' : 'bg-secondary text-secondary-foreground'
+                    (user.role === 'Admin' || user.role === 'admin') ? 'bg-primary/10 text-primary' : 'bg-secondary text-secondary-foreground'
                   }`}>
-                    {user.role}
+                    {user.role === 'admin' ? 'Admin' : user.role === 'user' ? 'Tecnico' : user.role}
                   </span>
                 </TableCell>
                 <TableCell>
@@ -298,14 +298,14 @@ export default function Users() {
               <Label htmlFor="role">Ruolo</Label>
               <Select
                 value={formData.role}
-                onValueChange={(value: "Admin" | "Tecnico") => setFormData({ ...formData, role: value })}
+                onValueChange={(value: "admin" | "user" | "Admin" | "Tecnico") => setFormData({ ...formData, role: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Tecnico">Tecnico</SelectItem>
-                  <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="user">Tecnico</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>

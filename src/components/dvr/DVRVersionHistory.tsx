@@ -26,27 +26,37 @@ interface DVRVersionHistoryProps {
   onVersionRestored: () => void;
 }
 
-const mapStatusLabel = (status: DVRStatus): string => {
-  const labels: Record<DVRStatus, string> = {
+const mapStatusLabel = (status: DVRStatus | string): string => {
+  const labels: Record<string, string> = {
     BOZZA: 'Bozza',
     IN_REVISIONE: 'In Revisione',
     IN_APPROVAZIONE: 'In Approvazione',
     APPROVATO: 'Approvato',
     FINALIZZATO: 'Finalizzato',
     ARCHIVIATO: 'Archiviato',
+    draft: 'Bozza',
+    in_progress: 'In Elaborazione',
+    review: 'In Revisione',
+    approved: 'Approvato',
+    archived: 'Archiviato',
   };
-  return labels[status] || status;
+  return labels[status] || String(status);
 };
 
 // Helper per mappare lo stato a una variante del badge
-const mapStatusVariant = (status: DVRStatus): "default" | "secondary" | "destructive" | "outline" => {
-  const variants: Record<DVRStatus, "default" | "secondary" | "destructive" | "outline"> = {
+const mapStatusVariant = (status: DVRStatus | string): "default" | "secondary" | "destructive" | "outline" => {
+  const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
     BOZZA: 'secondary',
     IN_REVISIONE: 'secondary',
     IN_APPROVAZIONE: 'secondary',
     APPROVATO: 'default',
     FINALIZZATO: 'default',
     ARCHIVIATO: 'outline',
+    draft: 'secondary',
+    in_progress: 'secondary',
+    review: 'secondary',
+    approved: 'default',
+    archived: 'outline',
   };
   return variants[status] || 'outline';
 };

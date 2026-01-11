@@ -21,10 +21,10 @@ interface DVRInfoEditorProps {
 const dvrSchema = z.object({
   nome: z.string().trim().min(1, "Il nome è obbligatorio").max(200, "Il nome non può superare i 200 caratteri"),
   descrizione: z.string().max(1000, "La descrizione non può superare i 1000 caratteri").optional(),
-  stato: z.enum(['BOZZA', 'IN_REVISIONE', 'IN_APPROVAZIONE', 'APPROVATO', 'FINALIZZATO', 'ARCHIVIATO'] as const)
+  stato: z.string()
 });
 
-const statusLabels: Record<DVRStatus, string> = {
+const statusLabels: Record<string, string> = {
   BOZZA: 'Bozza',
   IN_REVISIONE: 'In Revisione',
   IN_APPROVAZIONE: 'In Approvazione',
@@ -33,7 +33,7 @@ const statusLabels: Record<DVRStatus, string> = {
   ARCHIVIATO: 'Archiviato',
 };
 
-const statusColors: Record<DVRStatus, string> = {
+const statusColors: Record<string, string> = {
   BOZZA: 'bg-yellow-500',
   IN_REVISIONE: 'bg-blue-500',
   IN_APPROVAZIONE: 'bg-purple-500',
@@ -45,10 +45,10 @@ const statusColors: Record<DVRStatus, string> = {
 export function DVRInfoEditor({ dvr, onUpdate }: DVRInfoEditorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [nome, setNome] = useState(dvr.nome);
-  const [descrizione, setDescrizione] = useState(dvr.descrizione || "");
-  const [stato, setStato] = useState<DVRStatus>(dvr.stato);
-  const [companyId, setCompanyId] = useState<number | undefined>(dvr.company_id);
+  const [nome, setNome] = useState(dvr.nome || dvr.title || '');
+  const [descrizione, setDescrizione] = useState(dvr.descrizione || dvr.description || "");
+  const [stato, setStato] = useState<string>((dvr.stato || dvr.status || 'BOZZA') as string);
+  const [companyId, setCompanyId] = useState<number | undefined>(dvr.company_id || dvr.companyId);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -71,10 +71,10 @@ export function DVRInfoEditor({ dvr, onUpdate }: DVRInfoEditorProps) {
         stato
       });
 
-      await dvrApi.updateDVR(dvr.id, {
+      await dvrApi.updateDVR(String(dvr.id), {
         nome: validated.nome,
         descrizione: validated.descrizione,
-        stato: validated.stato,
+        stato: validated.stato as DVRStatus,
         company_id: companyId,
         updated_by: 'current_user'
       });
@@ -160,7 +160,7 @@ export function DVRInfoEditor({ dvr, onUpdate }: DVRInfoEditorProps) {
 
           <div className="space-y-2">
             <Label htmlFor="stato">Stato *</Label>
-            <Select value={stato} onValueChange={(value) => setStato(value as DVRStatus)}>
+            <Select value={stato} onValueChange={(value) => setStato(value)}>
               <SelectTrigger id="stato" className={errors.stato ? 'border-red-500' : ''}>
                 <SelectValue />
               </SelectTrigger>

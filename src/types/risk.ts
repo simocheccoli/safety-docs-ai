@@ -1,3 +1,4 @@
+// Aligned with OpenAPI spec: components/schemas/RiskType
 export type RiskStatus = 'draft' | 'validated' | 'active';
 
 export interface OutputField {
@@ -6,6 +7,27 @@ export interface OutputField {
   description: string;
   required: boolean;
   children?: OutputField[];
+}
+
+// Aligned with OpenAPI spec: components/schemas/RiskType
+// Supports both camelCase (OpenAPI) and legacy formats
+export interface RiskType {
+  id: string;
+  name: string;
+  description: string;
+  icon?: string; // New from OpenAPI
+  color?: string; // New from OpenAPI
+  prompt?: string; // OpenAPI uses 'prompt'
+  aiPrompt?: string; // Legacy alias
+  inputExpectations?: string;
+  outputStructure?: OutputField[] | object;
+  version?: number;
+  createdAt?: string; // OpenAPI uses camelCase
+  updatedAt?: string; // OpenAPI uses camelCase
+  
+  // Legacy fields
+  uuid?: string;
+  status?: RiskStatus;
 }
 
 export interface RiskVersion {
@@ -22,23 +44,54 @@ export interface RiskVersion {
   updated_at: string;
 }
 
-export interface RiskType {
-  id: string;
-  uuid?: string;
-  name: string;
-  description: string;
-  status: RiskStatus;
-  inputExpectations: string;
-  outputStructure: OutputField[];
-  aiPrompt: string;
-  version: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface RiskTestResult {
   success: boolean;
   valid: boolean;
   output: any;
   error?: string;
 }
+
+// Aligned with OpenAPI spec: components/schemas/CreateRiskTypeRequest
+export interface CreateRiskTypeRequest {
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  prompt?: string;
+  inputExpectations?: string;
+  outputStructure?: object;
+}
+
+// Helper to get prompt (supports both formats)
+export const getRiskPrompt = (risk: RiskType): string => {
+  return risk.prompt || risk.aiPrompt || '';
+};
+
+// Helper to convert backend response to frontend format
+export const mapRiskFromBackend = (data: any): RiskType => ({
+  id: String(data.id),
+  name: data.name,
+  description: data.description || '',
+  icon: data.icon,
+  color: data.color,
+  prompt: data.prompt,
+  aiPrompt: data.prompt, // Legacy alias
+  inputExpectations: data.inputExpectations,
+  outputStructure: data.outputStructure,
+  version: data.version,
+  createdAt: data.createdAt,
+  updatedAt: data.updatedAt,
+  uuid: data.uuid,
+  status: data.status || 'active',
+});
+
+// Helper to convert frontend data to backend format
+export const mapRiskToBackend = (data: Partial<RiskType>): CreateRiskTypeRequest => ({
+  name: data.name || '',
+  description: data.description,
+  icon: data.icon,
+  color: data.color,
+  prompt: data.prompt || data.aiPrompt,
+  inputExpectations: data.inputExpectations,
+  outputStructure: Array.isArray(data.outputStructure) ? data.outputStructure : data.outputStructure,
+});
