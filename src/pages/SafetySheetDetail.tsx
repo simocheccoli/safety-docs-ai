@@ -113,10 +113,10 @@ export default function SafetySheetDetail() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (uploadToDelete === null) return;
+    if (uploadToDelete === null || !id) return;
     
     try {
-      await deleteUpload(uploadToDelete);
+      await deleteUpload(Number(id), uploadToDelete);
       toast({
         title: "Successo",
         description: "Caricamento eliminato con successo",

@@ -9,8 +9,8 @@ export const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
   API_PREFIX: '/api/v1',
   TIMEOUT: Number(import.meta.env.VITE_API_TIMEOUT) || 30000,
-  // Enable demo mode if API is not available or explicitly set
-  DEMO_MODE: import.meta.env.VITE_DEMO_MODE === 'true' || true,
+  // DEMO_MODE disabilitato per usare le API reali
+  DEMO_MODE: import.meta.env.VITE_DEMO_MODE === 'true',
 };
 
 // OpenAI Configuration

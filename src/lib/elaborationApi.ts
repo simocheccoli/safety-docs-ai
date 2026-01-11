@@ -1,6 +1,6 @@
-import { Elaboration, ElaborationUpload, ElaborationFile, ElaborationStatus } from "@/types/elaboration";
-
-const DEMO_MODE = true;
+import { Elaboration, ElaborationUpload, ElaborationFile } from "@/types/elaboration";
+import { apiClient, simulateDelay } from './apiClient';
+import { isDemoMode, getApiBaseUrl } from './config';
 
 // Mock data
 let mockElaborationIdCounter = 4;
@@ -139,21 +139,49 @@ const mockUploads: ElaborationUpload[] = [
   },
 ];
 
+// Map backend response to frontend type
+const mapBackendElaboration = (data: any): Elaboration => ({
+  id: data.id,
+  title: data.title,
+  description: data.description || '',
+  company_id: data.companyId,
+  company_name: data.companyName,
+  status: data.status || 'pending',
+  uploads_count: data.uploadCount || 0,
+  files_count: data.fileCount || 0,
+  begin_process: data.beginProcess || null,
+  end_process: data.endProcess || null,
+  created_at: data.createdAt,
+  updated_at: data.updatedAt,
+  deleted_at: data.deletedAt || null,
+});
+
 // API Functions
 export async function fetchElaborations(): Promise<Elaboration[]> {
-  if (DEMO_MODE) {
-    await new Promise(resolve => setTimeout(resolve, 300));
+  if (isDemoMode()) {
+    await simulateDelay(300);
     return mockElaborations.filter(e => e.deleted_at === null);
   }
-  throw new Error('API not implemented');
+
+  const data = await apiClient.get<any[]>('/elaborations');
+  return data.map(mapBackendElaboration);
 }
 
 export async function fetchElaborationById(id: number): Promise<Elaboration | null> {
-  if (DEMO_MODE) {
-    await new Promise(resolve => setTimeout(resolve, 200));
+  if (isDemoMode()) {
+    await simulateDelay(200);
     return mockElaborations.find(e => e.id === id && e.deleted_at === null) || null;
   }
-  throw new Error('API not implemented');
+
+  try {
+    const data = await apiClient.get<any>(`/elaborations/${id}`);
+    return mapBackendElaboration(data);
+  } catch (error: any) {
+    if (error.message?.includes('404')) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function createElaboration(
@@ -162,8 +190,8 @@ export async function createElaboration(
   companyId: number | null,
   companyName: string | null
 ): Promise<Elaboration> {
-  if (DEMO_MODE) {
-    await new Promise(resolve => setTimeout(resolve, 300));
+  if (isDemoMode()) {
+    await simulateDelay(300);
     const newElaboration: Elaboration = {
       id: ++mockElaborationIdCounter,
       title,
@@ -182,41 +210,55 @@ export async function createElaboration(
     mockElaborations.push(newElaboration);
     return newElaboration;
   }
-  throw new Error('API not implemented');
+
+  const data = await apiClient.post<any>('/elaborations', {
+    title,
+    description,
+    companyId,
+  });
+  return mapBackendElaboration(data);
 }
 
 export async function updateElaboration(
   id: number,
   updates: Partial<Pick<Elaboration, 'title' | 'description' | 'company_id' | 'company_name'>>
 ): Promise<Elaboration> {
-  if (DEMO_MODE) {
-    await new Promise(resolve => setTimeout(resolve, 200));
+  if (isDemoMode()) {
+    await simulateDelay(200);
     const elaboration = mockElaborations.find(e => e.id === id);
     if (!elaboration) throw new Error('Elaboration not found');
     Object.assign(elaboration, updates, { updated_at: new Date().toISOString() });
     return elaboration;
   }
-  throw new Error('API not implemented');
+
+  const data = await apiClient.patch<any>(`/elaborations/${id}`, {
+    title: updates.title,
+    description: updates.description,
+    companyId: updates.company_id,
+  });
+  return mapBackendElaboration(data);
 }
 
 export async function deleteElaboration(id: number): Promise<void> {
-  if (DEMO_MODE) {
-    await new Promise(resolve => setTimeout(resolve, 200));
+  if (isDemoMode()) {
+    await simulateDelay(200);
     const elaboration = mockElaborations.find(e => e.id === id);
     if (elaboration) {
       elaboration.deleted_at = new Date().toISOString();
     }
     return;
   }
-  throw new Error('API not implemented');
+
+  return apiClient.delete(`/elaborations/${id}`);
 }
 
 export async function fetchElaborationUploads(elaborationId: number): Promise<ElaborationUpload[]> {
-  if (DEMO_MODE) {
-    await new Promise(resolve => setTimeout(resolve, 300));
+  if (isDemoMode()) {
+    await simulateDelay(300);
     return mockUploads.filter(u => u.elaboration_id === elaborationId);
   }
-  throw new Error('API not implemented');
+
+  return apiClient.get<ElaborationUpload[]>(`/elaborations/${elaborationId}/uploads`);
 }
 
 export async function createUpload(
@@ -226,8 +268,8 @@ export async function createUpload(
   ruolo: string,
   files: File[]
 ): Promise<ElaborationUpload> {
-  if (DEMO_MODE) {
-    await new Promise(resolve => setTimeout(resolve, 500));
+  if (isDemoMode()) {
+    await simulateDelay(500);
     
     const uploadId = ++mockUploadIdCounter;
     const newFiles: ElaborationFile[] = files.map(file => ({
@@ -260,12 +302,19 @@ export async function createUpload(
 
     return newUpload;
   }
-  throw new Error('API not implemented');
+
+  const formData = new FormData();
+  formData.append('mansione', mansione);
+  formData.append('reparto', reparto);
+  formData.append('ruolo', ruolo);
+  files.forEach(file => formData.append('files', file));
+
+  return apiClient.upload<ElaborationUpload>(`/elaborations/${elaborationId}/uploads`, formData);
 }
 
-export async function deleteUpload(uploadId: number): Promise<void> {
-  if (DEMO_MODE) {
-    await new Promise(resolve => setTimeout(resolve, 200));
+export async function deleteUpload(elaborationId: number, uploadId: number): Promise<void> {
+  if (isDemoMode()) {
+    await simulateDelay(200);
     const uploadIndex = mockUploads.findIndex(u => u.id === uploadId);
     if (uploadIndex !== -1) {
       const upload = mockUploads[uploadIndex];
@@ -279,7 +328,8 @@ export async function deleteUpload(uploadId: number): Promise<void> {
     }
     return;
   }
-  throw new Error('API not implemented');
+
+  return apiClient.delete(`/elaborations/${elaborationId}/uploads/${uploadId}`);
 }
 
 // Payload type for external service
@@ -332,8 +382,8 @@ export async function generateExcel(elaborationId: number): Promise<GenerateExce
     files: filesPayload,
   };
 
-  if (DEMO_MODE) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  if (isDemoMode()) {
+    await simulateDelay(1000);
     
     // Log the payload that would be sent
     console.log('📤 POST payload per servizio esterno:', JSON.stringify(payload, null, 2));
@@ -351,33 +401,40 @@ export async function generateExcel(elaborationId: number): Promise<GenerateExce
     return payload;
   }
 
-  // In production, make the actual HTTP POST call
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-  const response = await fetch(`${API_BASE_URL}/api/elaborations/generate-excel`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to generate Excel');
-  }
-
+  await apiClient.post(`/elaborations/${elaborationId}/generate`);
   return payload;
 }
 
-export function downloadExcel(id: number): void {
-  if (DEMO_MODE) {
+export async function downloadExcel(id: number): Promise<void> {
+  if (isDemoMode()) {
     console.log(`Mock: Downloading Excel for elaboration ${id}`);
     return;
   }
+
+  const blob = await apiClient.download(`/elaborations/${id}/excel`);
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `elaboration-${id}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
 }
 
-export function downloadZip(id: number): void {
-  if (DEMO_MODE) {
+export async function downloadZip(id: number): Promise<void> {
+  if (isDemoMode()) {
     console.log(`Mock: Downloading ZIP for elaboration ${id}`);
     return;
   }
+
+  const blob = await apiClient.download(`/elaborations/${id}/zip`);
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `elaboration-${id}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
 }

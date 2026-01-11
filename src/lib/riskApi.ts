@@ -1,9 +1,6 @@
 import { RiskType, OutputField, RiskVersion } from '@/types/risk';
-
-// DEMO MODE
-const DEMO_MODE = true;
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+import { apiClient, simulateDelay } from './apiClient';
+import { isDemoMode } from './config';
 
 // Mock data
 let mockRisks: RiskType[] = [
@@ -89,99 +86,83 @@ let mockRisks: RiskType[] = [
 
 let mockRiskIdCounter = 5;
 
-const simulateDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 // Backend API response types
 interface BackendRisk {
-  id: number;
-  uuid: string;
+  id: number | string;
+  uuid?: string;
   code?: string;
   name: string;
   description: string | null;
-  content_expectations: string | null;
-  output_structure: any[];
-  prompt: string | null;
-  status: 'draft' | 'validated' | 'active';
-  version: number;
-  created_at: string;
-  updated_at: string;
+  icon?: string;
+  color?: string;
+  inputExpectations?: string | null;
+  outputStructure?: any;
+  prompt?: string | null;
+  status?: 'draft' | 'validated' | 'active';
+  version?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Convert backend risk to frontend format
 const mapBackendRiskToFrontend = (backendRisk: BackendRisk): RiskType => {
   return {
     id: backendRisk.id.toString(),
-    uuid: backendRisk.uuid,
+    uuid: backendRisk.uuid || `risk-${backendRisk.id}`,
     name: backendRisk.name,
     description: backendRisk.description || '',
-    status: backendRisk.status,
-    inputExpectations: backendRisk.content_expectations || '',
-    outputStructure: Array.isArray(backendRisk.output_structure) 
-      ? backendRisk.output_structure as OutputField[]
+    status: backendRisk.status || 'active',
+    inputExpectations: backendRisk.inputExpectations || '',
+    outputStructure: Array.isArray(backendRisk.outputStructure) 
+      ? backendRisk.outputStructure as OutputField[]
       : [],
     aiPrompt: backendRisk.prompt || '',
-    version: backendRisk.version,
-    createdAt: backendRisk.created_at,
-    updatedAt: backendRisk.updated_at,
+    version: backendRisk.version || 1,
+    createdAt: backendRisk.createdAt || new Date().toISOString(),
+    updatedAt: backendRisk.updatedAt || new Date().toISOString(),
   };
 };
 
 // Convert frontend risk to backend format
 const mapFrontendRiskToBackend = (risk: Partial<RiskType>) => {
   return {
-    uuid: risk.uuid,
     name: risk.name,
     description: risk.description || null,
-    content_expectations: risk.inputExpectations || null,
-    output_structure: risk.outputStructure || [],
+    inputExpectations: risk.inputExpectations || null,
+    outputStructure: risk.outputStructure || [],
     prompt: risk.aiPrompt || null,
-    status: risk.status || 'draft',
   };
 };
 
 export const getRiskTypes = async (): Promise<RiskType[]> => {
-  if (DEMO_MODE) {
+  if (isDemoMode()) {
     await simulateDelay(300);
     return [...mockRisks];
   }
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/risks`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch risks');
-    }
-    const data = await response.json();
-    return data.map(mapBackendRiskToFrontend);
-  } catch (error) {
-    console.error('Error fetching risks:', error);
-    throw error;
-  }
+  const data = await apiClient.get<BackendRisk[]>('/risks');
+  return data.map(mapBackendRiskToFrontend);
 };
 
 export const getRiskTypeById = async (id: string): Promise<RiskType | null> => {
-  if (DEMO_MODE) {
+  if (isDemoMode()) {
     await simulateDelay(200);
     return mockRisks.find(r => r.id === id) || null;
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/risks/${id}`);
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null;
-      }
-      throw new Error('Failed to fetch risk');
-    }
-    const data = await response.json();
+    const data = await apiClient.get<BackendRisk>(`/risks/${id}`);
     return mapBackendRiskToFrontend(data);
-  } catch (error) {
-    console.error('Error fetching risk:', error);
+  } catch (error: any) {
+    if (error.message?.includes('404')) {
+      return null;
+    }
     throw error;
   }
 };
 
 export const saveRiskType = async (risk: RiskType): Promise<RiskType> => {
-  if (DEMO_MODE) {
+  if (isDemoMode()) {
     await simulateDelay(400);
     
     if (risk.id && risk.id !== 'new') {
@@ -209,69 +190,29 @@ export const saveRiskType = async (risk: RiskType): Promise<RiskType> => {
     return newRisk;
   }
 
-  try {
-    const backendRisk = mapFrontendRiskToBackend(risk);
-    
-    if (risk.id && risk.id !== 'new') {
-      const response = await fetch(`${API_BASE_URL}/api/risks/${risk.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(backendRisk),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update risk');
-      }
-      
-      const data = await response.json();
-      return mapBackendRiskToFrontend(data);
-    } else {
-      const response = await fetch(`${API_BASE_URL}/api/risks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(backendRisk),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to create risk');
-      }
-      
-      const data = await response.json();
-      return mapBackendRiskToFrontend(data);
-    }
-  } catch (error) {
-    console.error('Error saving risk:', error);
-    throw error;
+  const backendRisk = mapFrontendRiskToBackend(risk);
+  
+  if (risk.id && risk.id !== 'new') {
+    const data = await apiClient.patch<BackendRisk>(`/risks/${risk.id}`, backendRisk);
+    return mapBackendRiskToFrontend(data);
+  } else {
+    const data = await apiClient.post<BackendRisk>('/risks', backendRisk);
+    return mapBackendRiskToFrontend(data);
   }
 };
 
 export const deleteRiskType = async (id: string): Promise<void> => {
-  if (DEMO_MODE) {
+  if (isDemoMode()) {
     await simulateDelay(300);
     mockRisks = mockRisks.filter(r => r.id !== id);
     return;
   }
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/risks/${id}`, {
-      method: 'DELETE',
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to delete risk');
-    }
-  } catch (error) {
-    console.error('Error deleting risk:', error);
-    throw error;
-  }
+  return apiClient.delete(`/risks/${id}`);
 };
 
 export const getRiskVersions = async (riskId: string): Promise<RiskVersion[]> => {
-  if (DEMO_MODE) {
+  if (isDemoMode()) {
     await simulateDelay(200);
     const risk = mockRisks.find(r => r.id === riskId);
     if (!risk) return [];
@@ -291,40 +232,17 @@ export const getRiskVersions = async (riskId: string): Promise<RiskVersion[]> =>
     }];
   }
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/risks/${riskId}/versions`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch risk versions');
-    }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching risk versions:', error);
-    throw error;
-  }
+  return apiClient.get<RiskVersion[]>(`/risks/${riskId}/versions`);
 };
 
 export const revertRiskToVersion = async (riskId: string, version: number): Promise<RiskType> => {
-  if (DEMO_MODE) {
+  if (isDemoMode()) {
     await simulateDelay(300);
     const risk = mockRisks.find(r => r.id === riskId);
     if (!risk) throw new Error('Risk not found');
     return risk;
   }
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/risks/${riskId}/revert/${version}`, {
-      method: 'POST',
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to revert risk to version');
-    }
-    
-    const data = await response.json();
-    return mapBackendRiskToFrontend(data);
-  } catch (error) {
-    console.error('Error reverting risk to version:', error);
-    throw error;
-  }
+  const data = await apiClient.post<BackendRisk>(`/risks/${riskId}/revert/${version}`);
+  return mapBackendRiskToFrontend(data);
 };
