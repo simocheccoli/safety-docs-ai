@@ -1,8 +1,7 @@
 import { Deadline, CreateDeadlineData } from '@/types/deadline';
+import { apiClient, simulateDelay } from './apiClient';
+import { isDemoMode } from './config';
 import { addMonths, isBefore, startOfDay } from 'date-fns';
-
-const DEMO_MODE = true;
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 const today = startOfDay(new Date());
 
@@ -63,8 +62,6 @@ let mockDeadlines: Deadline[] = [
 
 let mockDeadlineIdCounter = 5;
 
-const simulateDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 const calculateStatus = (nextVisitDate?: string): 'pending' | 'completed' | 'overdue' => {
   if (!nextVisitDate) return 'pending';
   const visitDate = startOfDay(new Date(nextVisitDate));
@@ -80,7 +77,7 @@ const calculateNextVisitDate = (lastVisitDate: string, interval: string): string
 
 export const deadlineApi = {
   async getAll(): Promise<Deadline[]> {
-    if (DEMO_MODE) {
+    if (isDemoMode()) {
       await simulateDelay(300);
       return mockDeadlines.map(d => ({
         ...d,
@@ -88,15 +85,11 @@ export const deadlineApi = {
       }));
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/deadlines`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch deadlines');
-    }
-    return response.json();
+    return apiClient.get<Deadline[]>('/deadlines');
   },
 
   async getById(id: number): Promise<Deadline> {
-    if (DEMO_MODE) {
+    if (isDemoMode()) {
       await simulateDelay(200);
       const deadline = mockDeadlines.find(d => d.id === id);
       if (!deadline) throw new Error('Deadline not found');
@@ -106,15 +99,11 @@ export const deadlineApi = {
       };
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/deadlines/${id}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch deadline');
-    }
-    return response.json();
+    return apiClient.get<Deadline>(`/deadlines/${id}`);
   },
 
   async create(data: CreateDeadlineData, companyName?: string): Promise<Deadline> {
-    if (DEMO_MODE) {
+    if (isDemoMode()) {
       await simulateDelay(400);
       
       let nextVisitDate = data.next_visit_date;
@@ -135,19 +124,11 @@ export const deadlineApi = {
       return newDeadline;
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/deadlines`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      throw new Error('Failed to create deadline');
-    }
-    return response.json();
+    return apiClient.post<Deadline>('/deadlines', data);
   },
 
   async update(id: number, data: Partial<CreateDeadlineData>, companyName?: string): Promise<Deadline> {
-    if (DEMO_MODE) {
+    if (isDemoMode()) {
       await simulateDelay(300);
       const index = mockDeadlines.findIndex(d => d.id === id);
       if (index === -1) throw new Error('Deadline not found');
@@ -171,34 +152,21 @@ export const deadlineApi = {
       return mockDeadlines[index];
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/deadlines/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      throw new Error('Failed to update deadline');
-    }
-    return response.json();
+    return apiClient.put<Deadline>(`/deadlines/${id}`, data);
   },
 
   async delete(id: number): Promise<void> {
-    if (DEMO_MODE) {
+    if (isDemoMode()) {
       await simulateDelay(300);
       mockDeadlines = mockDeadlines.filter(d => d.id !== id);
       return;
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/deadlines/${id}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) {
-      throw new Error('Failed to delete deadline');
-    }
+    return apiClient.delete(`/deadlines/${id}`);
   },
 
   async markCompleted(id: number): Promise<Deadline> {
-    if (DEMO_MODE) {
+    if (isDemoMode()) {
       await simulateDelay(300);
       const index = mockDeadlines.findIndex(d => d.id === id);
       if (index === -1) throw new Error('Deadline not found');
@@ -221,12 +189,6 @@ export const deadlineApi = {
       return mockDeadlines[index];
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/deadlines/${id}/complete`, {
-      method: 'POST',
-    });
-    if (!response.ok) {
-      throw new Error('Failed to mark deadline as completed');
-    }
-    return response.json();
+    return apiClient.post<Deadline>(`/deadlines/${id}/complete`);
   }
 };
