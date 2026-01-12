@@ -51,7 +51,7 @@ const fetchWithTimeout = async (
  * Get auth token from localStorage
  */
 const getAuthToken = (): string | null => {
-  const user = localStorage.getItem('currentUser');
+  const user = localStorage.getItem('hseb5_current_user');
   if (user) {
     try {
       const parsed = JSON.parse(user);
