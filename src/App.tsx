@@ -2,9 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import SafetySheets from "./pages/SafetySheets";
 import SafetySheetDetail from "./pages/SafetySheetDetail";
@@ -23,8 +24,6 @@ import Deadlines from "./pages/Deadlines";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const isLoginPage = window.location.pathname === '/login';
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -33,10 +32,10 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
-            {isLoginPage ? null : (
-              <Route
-                path="*"
-                element={
+            <Route
+              path="*"
+              element={
+                <ProtectedRoute>
                   <SidebarProvider>
                     <div className="flex min-h-screen w-full">
                       <AppSidebar />
@@ -47,26 +46,26 @@ const App = () => {
                         <main className="flex-1 p-6">
                           <Routes>
                             <Route path="/" element={<Dashboard />} />
-            <Route path="/safety-sheets" element={<SafetySheets />} />
-            <Route path="/safety-sheets/:id" element={<SafetySheetDetail />} />
-            <Route path="/companies" element={<Companies />} />
-            <Route path="/deadlines" element={<Deadlines />} />
-              <Route path="/rischi" element={<RiskManagement />} />
-              <Route path="/rischi/:id" element={<RiskDetail />} />
-          <Route path="/dvr" element={<DVRList />} />
-          <Route path="/dvr/wizard" element={<DVRWizard />} />
-          <Route path="/dvr/:id" element={<DVRDetail />} />
-          <Route path="/dvr/:id/document" element={<DVRDocumentEditor />} />
-            <Route path="/users" element={<Users />} />
+                            <Route path="/safety-sheets" element={<SafetySheets />} />
+                            <Route path="/safety-sheets/:id" element={<SafetySheetDetail />} />
+                            <Route path="/companies" element={<Companies />} />
+                            <Route path="/deadlines" element={<Deadlines />} />
+                            <Route path="/rischi" element={<RiskManagement />} />
+                            <Route path="/rischi/:id" element={<RiskDetail />} />
+                            <Route path="/dvr" element={<DVRList />} />
+                            <Route path="/dvr/wizard" element={<DVRWizard />} />
+                            <Route path="/dvr/:id" element={<DVRDetail />} />
+                            <Route path="/dvr/:id/document" element={<DVRDocumentEditor />} />
+                            <Route path="/users" element={<Users />} />
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </main>
                       </div>
                     </div>
                   </SidebarProvider>
-                }
-              />
-            )}
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

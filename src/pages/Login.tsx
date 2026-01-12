@@ -23,21 +23,26 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simula attesa risposta API
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const user = login(email, password);
-    
-    if (user) {
-      setIsLoading(false);
-      navigate("/");
-    } else {
-      setIsLoading(false);
+    try {
+      const user = await login(email, password);
+      
+      if (user) {
+        navigate("/");
+      } else {
+        toast({
+          title: "Errore di accesso",
+          description: "Email o password non corretti, oppure utente disattivato",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
-        title: "Errore di accesso",
-        description: "Email o password non corretti, oppure utente disattivato",
+        title: "Errore di connessione",
+        description: "Impossibile contattare il server. Riprova più tardi.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
