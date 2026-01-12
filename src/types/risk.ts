@@ -1,5 +1,5 @@
 // Aligned with OpenAPI spec: components/schemas/RiskType
-export type RiskStatus = 'draft' | 'validated' | 'active';
+export type RiskStatus = 'draft' | 'validated' | 'active' | 'archived';
 
 export interface OutputField {
   name: string;
@@ -24,7 +24,7 @@ export interface RiskType {
   version?: number;
   createdAt?: string; // OpenAPI uses camelCase
   updatedAt?: string; // OpenAPI uses camelCase
-  
+
   // Legacy fields
   uuid?: string;
   status?: RiskStatus;
@@ -60,6 +60,7 @@ export interface CreateRiskTypeRequest {
   prompt?: string;
   inputExpectations?: string;
   outputStructure?: object;
+  status?: RiskStatus;
 }
 
 // Helper to get prompt (supports both formats)
@@ -94,4 +95,5 @@ export const mapRiskToBackend = (data: Partial<RiskType>): CreateRiskTypeRequest
   prompt: data.prompt || data.aiPrompt,
   inputExpectations: data.inputExpectations,
   outputStructure: Array.isArray(data.outputStructure) ? data.outputStructure : data.outputStructure,
+  status: data.status,
 });
