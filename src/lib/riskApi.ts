@@ -128,6 +128,7 @@ const mapFrontendRiskToBackend = (risk: Partial<RiskType>) => {
   return {
     name: risk.name,
     description: risk.description || null,
+    status: risk.status || 'draft',
     inputExpectations: risk.inputExpectations || null,
     outputStructure: risk.outputStructure || [],
     prompt: risk.aiPrompt || null,
