@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, FileSpreadsheet, Download, Archive, Building2, Calendar, FileText, FolderUp, Briefcase, Building, User, ChevronDown, ChevronRight, Eye, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, FileSpreadsheet, Download, Archive, Building2, Calendar, FileText, FolderUp, Briefcase, Building, User, ChevronDown, ChevronRight, Eye, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DetailPageSkeleton, UploadListSkeleton, StatCardGridSkeleton } from "@/components/ui/loading-skeletons";
@@ -61,7 +61,7 @@ export default function SafetySheetDetail() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [uploadToDelete, setUploadToDelete] = useState<number | null>(null);
-  const [generatingExcel, setGeneratingExcel] = useState(false);
+  const [generatingExcel, setGeneratingExcel] = useState<number | null>(null);
   const [expandedUploads, setExpandedUploads] = useState<Set<number>>(new Set());
   const [previewFile, setPreviewFile] = useState<FileWithContext | null>(null);
 
@@ -134,12 +134,12 @@ export default function SafetySheetDetail() {
     }
   };
 
-  const handleGenerateExcel = async () => {
+  const handleGenerateExcel = async (uploadId: number) => {
     if (!elaboration) return;
     
-    setGeneratingExcel(true);
+    setGeneratingExcel(uploadId);
     try {
-      await generateExcel(elaboration.id);
+      await generateExcel(elaboration.id, uploadId);
       toast({
         title: "Elaborazione avviata",
         description: "La generazione del documento Excel è stata avviata. Lo stato verrà aggiornato al completamento.",
@@ -152,7 +152,7 @@ export default function SafetySheetDetail() {
         variant: "destructive",
       });
     } finally {
-      setGeneratingExcel(false);
+      setGeneratingExcel(null);
     }
   };
 
@@ -262,16 +262,6 @@ export default function SafetySheetDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {canGenerateExcel && (
-              <Button 
-                onClick={handleGenerateExcel} 
-                disabled={generatingExcel}
-                className="gap-2"
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                {generatingExcel ? "Generazione..." : "Genera Excel"}
-              </Button>
-            )}
             {canDownload && (
               <>
                 <Tooltip>
@@ -417,6 +407,24 @@ export default function SafetySheetDetail() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleGenerateExcel(upload.id)}
+                                    disabled={upload.status === 'elaborating' || generatingExcel === upload.id}
+                                    className="hover:bg-primary/10"
+                                  >
+                                    {generatingExcel === upload.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <FileSpreadsheet className="h-4 w-4 text-primary" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Genera Excel</TooltipContent>
+                              </Tooltip>
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button

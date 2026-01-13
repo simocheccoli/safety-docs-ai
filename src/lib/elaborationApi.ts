@@ -350,9 +350,14 @@ export interface GenerateExcelPayload {
   files: FilePayload[];
 }
 
-export async function generateExcel(elaborationId: number): Promise<GenerateExcelPayload> {
+export async function generateExcel(elaborationId: number, uploadId?: number): Promise<GenerateExcelPayload> {
   const elaboration = mockElaborations.find(e => e.id === elaborationId);
-  const uploads = mockUploads.filter(u => u.elaboration_id === elaborationId);
+  let uploads = mockUploads.filter(u => u.elaboration_id === elaborationId);
+  
+  // If uploadId is provided, filter to only that upload
+  if (uploadId) {
+    uploads = uploads.filter(u => u.id === uploadId);
+  }
   
   if (!elaboration) {
     throw new Error('Elaboration not found');
@@ -388,12 +393,27 @@ export async function generateExcel(elaborationId: number): Promise<GenerateExce
     // Log the payload that would be sent
     console.log('📤 POST payload per servizio esterno:', JSON.stringify(payload, null, 2));
     
-    elaboration.status = 'elaborating';
+    // Update the specific upload status if uploadId is provided
+    if (uploadId) {
+      const upload = mockUploads.find(u => u.id === uploadId);
+      if (upload) {
+        upload.status = 'elaborating';
+      }
+    } else {
+      elaboration.status = 'elaborating';
+    }
     elaboration.updated_at = new Date().toISOString();
     
     // Simulate processing completion after 3 seconds
     setTimeout(() => {
-      elaboration.status = 'completed';
+      if (uploadId) {
+        const upload = mockUploads.find(u => u.id === uploadId);
+        if (upload) {
+          upload.status = 'completed';
+        }
+      } else {
+        elaboration.status = 'completed';
+      }
       elaboration.end_process = new Date().toISOString();
       elaboration.updated_at = new Date().toISOString();
     }, 3000);
@@ -401,7 +421,10 @@ export async function generateExcel(elaborationId: number): Promise<GenerateExce
     return payload;
   }
 
-  await apiClient.post(`/elaborations/${elaborationId}/generate`);
+  const endpoint = uploadId 
+    ? `/elaborations/${elaborationId}/uploads/${uploadId}/generate`
+    : `/elaborations/${elaborationId}/generate`;
+  await apiClient.post(endpoint);
   return payload;
 }
 
