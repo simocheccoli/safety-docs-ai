@@ -501,7 +501,7 @@ export default function SafetySheetDetail() {
                                   <FileText className="h-4 w-4 text-muted-foreground" />
                                   <span className="text-sm font-medium">{upload.files.length} allegati</span>
                                 </div>
-                                <div>{getStatusBadge(upload.status)}</div>
+                                
                                 <div className="text-sm text-muted-foreground">
                                   {formatDate(upload.createdAt || upload.created_at)}
                                 </div>
