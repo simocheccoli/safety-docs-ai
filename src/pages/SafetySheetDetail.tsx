@@ -39,7 +39,8 @@ import {
   deleteUpload, 
   generateExcel,
   downloadExcel,
-  downloadZip
+  downloadZip,
+  fetchFilePreview
 } from "@/lib/elaborationApi";
 import { useToast } from "@/hooks/use-toast";
 import { NewUploadDialog } from "@/components/safety-sheets/NewUploadDialog";
@@ -64,6 +65,8 @@ export default function SafetySheetDetail() {
   const [generatingExcel, setGeneratingExcel] = useState<number | null>(null);
   const [expandedUploads, setExpandedUploads] = useState<Set<number>>(new Set());
   const [previewFile, setPreviewFile] = useState<FileWithContext | null>(null);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -184,6 +187,42 @@ export default function SafetySheetDetail() {
       }
       return next;
     });
+  };
+
+  const handlePreviewFile = async (file: FileWithContext) => {
+    setPreviewFile(file);
+    
+    // Clean up previous blob URL
+    if (previewBlobUrl) {
+      window.URL.revokeObjectURL(previewBlobUrl);
+      setPreviewBlobUrl(null);
+    }
+    
+    // If file has previewUrl, fetch with Bearer auth
+    if (file.previewUrl) {
+      setPreviewLoading(true);
+      try {
+        const blobUrl = await fetchFilePreview(file.previewUrl);
+        setPreviewBlobUrl(blobUrl);
+      } catch (error) {
+        console.error('Error fetching file preview:', error);
+        toast({
+          title: "Errore",
+          description: "Impossibile caricare l'anteprima del file",
+          variant: "destructive",
+        });
+      } finally {
+        setPreviewLoading(false);
+      }
+    }
+  };
+
+  const handleClosePreview = () => {
+    setPreviewFile(null);
+    if (previewBlobUrl) {
+      window.URL.revokeObjectURL(previewBlobUrl);
+      setPreviewBlobUrl(null);
+    }
   };
 
   const formatDate = (dateString: string | undefined | null) => {
@@ -466,7 +505,7 @@ export default function SafetySheetDetail() {
                                         variant="ghost"
                                         size="icon"
                                         className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onClick={() => setPreviewFile({
+                                        onClick={() => handlePreviewFile({
                                           ...file,
                                           mansione: upload.mansione,
                                           reparto: upload.reparto,
@@ -522,7 +561,7 @@ export default function SafetySheetDetail() {
         </AlertDialog>
 
         {/* PDF Preview Sheet */}
-        <Sheet open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
+        <Sheet open={!!previewFile} onOpenChange={(open) => !open && handleClosePreview()}>
           <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col p-0">
             <SheetHeader className="p-6 border-b">
               <div className="flex items-center justify-between">
@@ -550,17 +589,35 @@ export default function SafetySheetDetail() {
             </SheetHeader>
             <div className="flex-1 bg-muted/30 overflow-hidden">
               {previewFile && (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  <div className="text-center p-8">
-                    <FileText className="h-16 w-16 mx-auto mb-4 text-destructive/50" />
-                    <p className="font-medium mb-2">{previewFile.filename}</p>
-                    <p className="text-sm mb-4">{formatFileSize(previewFile.size)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      In modalità demo l'anteprima non è disponibile.<br />
-                      In produzione, il PDF verrà visualizzato qui.
-                    </p>
-                  </div>
-                </div>
+                <>
+                  {previewLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" />
+                        <p className="text-sm text-muted-foreground">Caricamento anteprima...</p>
+                      </div>
+                    </div>
+                  ) : previewBlobUrl ? (
+                    <iframe
+                      src={previewBlobUrl}
+                      className="w-full h-full border-0"
+                      title={`Anteprima di ${previewFile.filename}`}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      <div className="text-center p-8">
+                        <FileText className="h-16 w-16 mx-auto mb-4 text-destructive/50" />
+                        <p className="font-medium mb-2">{previewFile.filename}</p>
+                        <p className="text-sm mb-4">{formatFileSize(previewFile.size)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {previewFile.previewUrl 
+                            ? "Errore nel caricamento dell'anteprima."
+                            : "Anteprima non disponibile per questo file."}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </SheetContent>

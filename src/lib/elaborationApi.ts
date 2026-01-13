@@ -463,3 +463,19 @@ export async function downloadZip(id: number): Promise<void> {
   window.URL.revokeObjectURL(url);
   document.body.removeChild(a);
 }
+
+/**
+ * Fetch file preview as blob URL with Bearer token authentication
+ * @param previewUrl The preview URL from the file object
+ * @returns Object URL for the blob (must be revoked when done)
+ */
+export async function fetchFilePreview(previewUrl: string): Promise<string> {
+  if (isDemoMode()) {
+    // In demo mode, return empty string as preview is not available
+    console.log('Mock: fetchFilePreview called for', previewUrl);
+    return '';
+  }
+
+  const blob = await apiClient.download(previewUrl);
+  return window.URL.createObjectURL(blob);
+}

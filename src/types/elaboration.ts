@@ -74,6 +74,7 @@ export interface ElaborationFile {
   originalName?: string;
   mimeType?: string;
   size?: number;
+  previewUrl?: string; // URL for file preview (requires Bearer auth)
   created_at?: string; // Legacy
 }
 
@@ -155,5 +156,6 @@ export const mapFileFromBackend = (data: any): ElaborationFile => ({
   originalName: data.originalName,
   mimeType: data.mimeType,
   size: data.size,
+  previewUrl: data.previewUrl,
   created_at: data.created_at,
 });
