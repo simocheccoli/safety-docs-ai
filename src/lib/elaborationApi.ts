@@ -29,7 +29,7 @@ const mockElaborations: Elaboration[] = [
     description: "Valutazione rischi magazzino centrale",
     company_id: 2,
     company_name: "TechCorp S.p.A.",
-    status: 'elaborating',
+    status: 'processing',
     uploads_count: 2,
     files_count: 5,
     begin_process: new Date(2024, 11, 1, 14, 0).toISOString(),
@@ -44,7 +44,7 @@ const mockElaborations: Elaboration[] = [
     description: "Valutazione rischi uffici amministrativi",
     company_id: 1,
     company_name: "Acme Industries S.r.l.",
-    status: 'bozza',
+    status: 'pending',
     uploads_count: 1,
     files_count: 2,
     begin_process: new Date(2024, 11, 5, 9, 0).toISOString(),
@@ -192,7 +192,7 @@ export async function createElaboration(
       description,
       company_id: companyId,
       company_name: companyName,
-      status: 'bozza',
+      status: 'pending',
       uploads_count: 0,
       files_count: 0,
       begin_process: new Date().toISOString(),
@@ -337,7 +337,7 @@ export async function generateElaboration(elaborationId: number): Promise<void> 
       throw new Error('Elaboration not found');
     }
     
-    elaboration.status = 'elaborating';
+    elaboration.status = 'processing';
     elaboration.updated_at = new Date().toISOString();
     
     // Simulate processing completion after 3 seconds

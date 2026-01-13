@@ -272,19 +272,20 @@ export default function SafetySheetDetail() {
 
   const getStatusBadge = (status: string, size: 'sm' | 'lg' = 'sm') => {
     const configs: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
-      bozza: { label: "Bozza", variant: "secondary" },
       pending: { label: "In attesa", variant: "outline" },
+      processing: { label: "In elaborazione", variant: "default", className: "bg-amber-500 hover:bg-amber-500" },
       elaborating: { label: "In elaborazione", variant: "default", className: "bg-amber-500 hover:bg-amber-500" },
       completed: { label: "Completato", variant: "default", className: "bg-green-600 hover:bg-green-600" },
       error: { label: "Errore", variant: "destructive" },
     };
-    const config = configs[status] || configs.bozza;
+    const config = configs[status] || configs.pending;
+    const isProcessing = status === 'processing' || status === 'elaborating';
     return (
       <Badge 
         variant={config.variant} 
         className={`${config.className || ''} ${size === 'lg' ? 'px-3 py-1 text-sm' : ''}`}
       >
-        {status === 'elaborating' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+        {isProcessing && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
         {config.label}
       </Badge>
     );
@@ -298,10 +299,10 @@ export default function SafetySheetDetail() {
     return null;
   }
 
-  const canGenerate = uploads.length > 0 && (elaboration.status === 'bozza' || elaboration.status === 'pending');
+  const canGenerate = uploads.length > 0 && elaboration.status === 'pending';
   const canDownloadExcel = elaboration.status === 'completed';
   const canDownloadZip = elaboration.status === 'completed';
-  const isProcessing = elaboration.status === 'elaborating';
+  const isProcessing = elaboration.status === 'elaborating' || elaboration.status === 'processing';
 
   return (
     <TooltipProvider>

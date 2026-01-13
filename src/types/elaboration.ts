@@ -1,26 +1,12 @@
 // Aligned with OpenAPI spec: components/schemas/Elaboration
-// Supports both OpenAPI format and legacy format
-export type ElaborationStatus = 
-  | 'pending' | 'processing' | 'completed' | 'error'
-  | 'bozza' | 'elaborating'; // Legacy formats
+export type ElaborationStatus = 'pending' | 'processing' | 'elaborating' | 'completed' | 'error';
 
-// Legacy status mapping
-export const ELABORATION_STATUS_MAP: Record<string, string> = {
-  'bozza': 'pending',
-  'elaborating': 'processing',
-  'completed': 'completed',
-  'error': 'error',
-  'pending': 'bozza',
-  'processing': 'elaborating',
-};
-
-export const ELABORATION_STATUS_LABELS: Record<string, string> = {
+export const ELABORATION_STATUS_LABELS: Record<ElaborationStatus, string> = {
   'pending': 'In Attesa',
   'processing': 'In Elaborazione',
+  'elaborating': 'In Elaborazione',
   'completed': 'Completato',
   'error': 'Errore',
-  'bozza': 'Bozza',
-  'elaborating': 'In Elaborazione',
 };
 
 // Aligned with OpenAPI spec: components/schemas/Elaboration
