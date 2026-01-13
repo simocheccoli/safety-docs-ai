@@ -31,7 +31,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const currentUser = getCurrentUser();
   const username = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Utente';
-  const isAdmin = currentUser?.role === 'Admin';
+  const isAdmin = currentUser?.role.toLowerCase() === 'admin';
 
   const handleLogout = () => {
     logout();
