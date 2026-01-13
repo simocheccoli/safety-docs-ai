@@ -12,6 +12,7 @@ import { DeadlineDialog } from "@/components/deadline/DeadlineDialog";
 import { QuickCompanyDialog } from "@/components/deadline/QuickCompanyDialog";
 import { deadlineApi } from "@/lib/deadlineApi";
 import { companyApi } from "@/lib/companyApi";
+import { getRiskTypes } from "@/lib/riskApi";
 import { Deadline, CreateDeadlineData } from "@/types/deadline";
 import { CreateCompanyData } from "@/types/company";
 import { toast } from "@/hooks/use-toast";
@@ -38,9 +39,14 @@ export default function Deadlines() {
     queryFn: companyApi.getAll,
   });
 
+  const { data: risks = [], isLoading: risksLoading } = useQuery({
+    queryKey: ['risks'],
+    queryFn: getRiskTypes,
+  });
+
   const createMutation = useMutation({
-    mutationFn: ({ data, companyName }: { data: CreateDeadlineData; companyName?: string }) => 
-      deadlineApi.create(data, companyName),
+    mutationFn: ({ data, companyName, riskName }: { data: CreateDeadlineData; companyName?: string; riskName?: string }) => 
+      deadlineApi.create(data, companyName, riskName),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deadlines'] });
       toast({ title: "Scadenza creata con successo" });
@@ -51,8 +57,8 @@ export default function Deadlines() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data, companyName }: { id: number; data: Partial<CreateDeadlineData>; companyName?: string }) => 
-      deadlineApi.update(id, data, companyName),
+    mutationFn: ({ id, data, companyName, riskName }: { id: number; data: Partial<CreateDeadlineData>; companyName?: string; riskName?: string }) => 
+      deadlineApi.update(id, data, companyName, riskName),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deadlines'] });
       toast({ title: "Scadenza aggiornata con successo" });
@@ -110,11 +116,11 @@ export default function Deadlines() {
 
   const overdueCount = deadlines.filter(d => d.status === 'overdue').length;
 
-  const handleSave = async (data: CreateDeadlineData, companyName?: string) => {
+  const handleSave = async (data: CreateDeadlineData, companyName?: string, riskName?: string) => {
     if (editingDeadline) {
-      await updateMutation.mutateAsync({ id: editingDeadline.id, data, companyName });
+      await updateMutation.mutateAsync({ id: editingDeadline.id, data, companyName, riskName });
     } else {
-      await createMutation.mutateAsync({ data, companyName });
+      await createMutation.mutateAsync({ data, companyName, riskName });
     }
   };
 
@@ -149,7 +155,7 @@ export default function Deadlines() {
     });
   };
 
-  const isLoading = deadlinesLoading || companiesLoading;
+  const isLoading = deadlinesLoading || companiesLoading || risksLoading;
 
   return (
     <div className="space-y-6">
@@ -326,6 +332,7 @@ export default function Deadlines() {
         onOpenChange={setDialogOpen}
         deadline={editingDeadline}
         companies={companies}
+        risks={risks}
         onSave={handleSave}
         onQuickCreateCompany={() => setQuickCompanyDialogOpen(true)}
       />
