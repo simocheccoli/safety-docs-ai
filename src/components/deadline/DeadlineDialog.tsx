@@ -8,14 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePicker } from "@/components/ui/date-picker";
 import { Deadline, CreateDeadlineData, NextVisitInterval, INTERVAL_LABELS } from "@/types/deadline";
 import { Company } from "@/types/company";
-import { Plus, Building2 } from "lucide-react";
+import { RiskType } from "@/types/risk";
+import { Plus, Building2, ShieldAlert } from "lucide-react";
 
 interface DeadlineDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   deadline?: Deadline;
   companies: Company[];
-  onSave: (data: CreateDeadlineData, companyName?: string) => Promise<void>;
+  riskTypes: RiskType[];
+  onSave: (data: CreateDeadlineData, companyName?: string, riskTypeName?: string) => Promise<void>;
   onQuickCreateCompany: () => void;
 }
 
@@ -24,6 +26,7 @@ export function DeadlineDialog({
   onOpenChange, 
   deadline, 
   companies, 
+  riskTypes,
   onSave,
   onQuickCreateCompany 
 }: DeadlineDialogProps) {
@@ -31,6 +34,7 @@ export function DeadlineDialog({
   const [description, setDescription] = useState("");
   const [note, setNote] = useState("");
   const [companyId, setCompanyId] = useState<string>("");
+  const [riskTypeId, setRiskTypeId] = useState<string>("");
   const [lastVisitDate, setLastVisitDate] = useState<Date | undefined>();
   const [nextVisitDate, setNextVisitDate] = useState<Date | undefined>();
   const [nextVisitInterval, setNextVisitInterval] = useState<NextVisitInterval>("12");
@@ -43,6 +47,7 @@ export function DeadlineDialog({
         setDescription(deadline.description || "");
         setNote(deadline.note || "");
         setCompanyId(deadline.company_id.toString());
+        setRiskTypeId(deadline.risk_type_id || "");
         setLastVisitDate(deadline.last_visit_date ? new Date(deadline.last_visit_date) : undefined);
         setNextVisitDate(deadline.next_visit_date ? new Date(deadline.next_visit_date) : undefined);
         setNextVisitInterval(deadline.next_visit_interval);
@@ -51,6 +56,7 @@ export function DeadlineDialog({
         setDescription("");
         setNote("");
         setCompanyId("");
+        setRiskTypeId("");
         setLastVisitDate(undefined);
         setNextVisitDate(undefined);
         setNextVisitInterval("12");
@@ -64,16 +70,18 @@ export function DeadlineDialog({
     setIsSaving(true);
     try {
       const selectedCompany = companies.find(c => c.id.toString() === companyId);
+      const selectedRiskType = riskTypes.find(r => r.id === riskTypeId);
       const data: CreateDeadlineData = {
         title: title.trim(),
         description: description.trim() || undefined,
         note: note.trim() || undefined,
         company_id: parseInt(companyId),
+        risk_type_id: riskTypeId || undefined,
         last_visit_date: lastVisitDate?.toISOString().split('T')[0],
         next_visit_date: nextVisitInterval === 'custom' ? nextVisitDate?.toISOString().split('T')[0] : undefined,
         next_visit_interval: nextVisitInterval,
       };
-      await onSave(data, selectedCompany?.name);
+      await onSave(data, selectedCompany?.name, selectedRiskType?.name);
       onOpenChange(false);
     } finally {
       setIsSaving(false);
@@ -144,6 +152,35 @@ export function DeadlineDialog({
                     <span className="flex items-center gap-2">
                       <Building2 className="h-4 w-4 text-muted-foreground" />
                       {company.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Tipo di Rischio</Label>
+            <Select value={riskTypeId} onValueChange={setRiskTypeId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona tipo di rischio">
+                  {riskTypeId && (
+                    <span className="flex items-center gap-2">
+                      <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                      {riskTypes.find(r => r.id === riskTypeId)?.name}
+                    </span>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">
+                  <span className="text-muted-foreground">Nessuno</span>
+                </SelectItem>
+                {riskTypes.map((riskType) => (
+                  <SelectItem key={riskType.id} value={riskType.id}>
+                    <span className="flex items-center gap-2">
+                      <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                      {riskType.name}
                     </span>
                   </SelectItem>
                 ))}
