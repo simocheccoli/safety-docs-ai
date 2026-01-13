@@ -6,7 +6,7 @@
 // API Configuration
 export const API_CONFIG = {
   // Backend uses /api/v1 prefix according to OpenAPI spec
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081',
   API_PREFIX: '/api/v1',
   TIMEOUT: Number(import.meta.env.VITE_API_TIMEOUT) || 30000,
   // DEMO_MODE disabilitato per usare le API reali
