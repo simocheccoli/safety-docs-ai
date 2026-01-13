@@ -7,6 +7,8 @@ export interface Deadline {
   note?: string;
   company_id: number;
   company_name?: string;
+  risk_type_id?: string;
+  risk_type_name?: string;
   last_visit_date?: string;
   next_visit_date?: string;
   next_visit_interval: NextVisitInterval;
@@ -20,6 +22,7 @@ export interface CreateDeadlineData {
   description?: string;
   note?: string;
   company_id: number;
+  risk_type_id?: string;
   last_visit_date?: string;
   next_visit_date?: string;
   next_visit_interval: NextVisitInterval;
