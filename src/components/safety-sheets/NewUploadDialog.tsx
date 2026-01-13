@@ -11,11 +11,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, X } from "lucide-react";
+import { Upload, X, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createUpload } from "@/lib/elaborationApi";
 import { companyApi } from "@/lib/companyApi";
 import { Company } from "@/types/company";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+const MAX_FILE_SIZE_MB = 20;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 interface NewUploadDialogProps {
   open: boolean;
@@ -52,19 +56,37 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files).filter(
-        file => file.type === 'application/pdf'
-      );
+      const allFiles = Array.from(e.target.files);
+      const validFiles: File[] = [];
+      const errors: string[] = [];
       
-      if (newFiles.length !== e.target.files.length) {
+      allFiles.forEach(file => {
+        // Check file type
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+          errors.push(`"${file.name}" non è un file PDF`);
+          return;
+        }
+        
+        // Check file size
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          errors.push(`"${file.name}" supera il limite di ${MAX_FILE_SIZE_MB}MB`);
+          return;
+        }
+        
+        validFiles.push(file);
+      });
+      
+      if (errors.length > 0) {
         toast({
-          title: "Attenzione",
-          description: "Solo file PDF sono accettati",
+          title: "File non validi",
+          description: errors.join('. '),
           variant: "destructive",
         });
       }
       
-      setFiles(prev => [...prev, ...newFiles]);
+      if (validFiles.length > 0) {
+        setFiles(prev => [...prev, ...validFiles]);
+      }
     }
   };
 
@@ -73,33 +95,7 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, 
   };
 
   const handleSubmit = async () => {
-    if (!mansione.trim()) {
-      toast({
-        title: "Errore",
-        description: "Seleziona la mansione",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!reparto.trim()) {
-      toast({
-        title: "Errore",
-        description: "Seleziona il reparto",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!ruolo.trim()) {
-      toast({
-        title: "Errore",
-        description: "Seleziona il ruolo",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    // Only files are required now, mansione/reparto/ruolo are optional
     if (files.length === 0) {
       toast({
         title: "Errore",
@@ -114,16 +110,34 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, 
       await createUpload(elaborationId, mansione.trim(), reparto.trim(), ruolo.trim(), files);
 
       toast({
-        title: "Caricamento completato",
-        description: `${files.length} file caricati con successo`,
+        title: "Upload completato",
+        description: (
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <span>{files.length} file caricati con successo</span>
+          </div>
+        ),
       });
 
       resetForm();
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
+      // Handle different error types
+      let errorMessage = "Impossibile completare il caricamento";
+      
+      if (error?.message?.includes('network') || error?.message?.includes('fetch')) {
+        errorMessage = "Errore di rete. Verifica la connessione e riprova.";
+      } else if (error?.status === 413 || error?.message?.includes('413')) {
+        errorMessage = "File troppo grande. Riduci la dimensione dei file.";
+      } else if (error?.status === 422 || error?.message?.includes('422')) {
+        errorMessage = "Dati non validi. Verifica i campi e riprova.";
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
-        title: "Errore",
-        description: "Impossibile completare il caricamento",
+        title: "Errore Upload",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -246,26 +260,34 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, 
               <Input
                 id="files"
                 type="file"
-                accept=".pdf"
+                accept=".pdf,application/pdf"
                 multiple
                 onChange={handleFileChange}
                 className="hidden"
+                disabled={loading}
               />
               <Button
                 type="button"
                 variant="outline"
                 className="w-full"
                 onClick={() => document.getElementById('files')?.click()}
+                disabled={loading}
               >
                 <Upload className="mr-2 h-4 w-4" />
                 Seleziona File PDF
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Solo file PDF, max {MAX_FILE_SIZE_MB}MB per file
+            </p>
           </div>
 
           {files.length > 0 && (
             <div className="grid gap-2">
-              <Label>File Selezionati ({files.length})</Label>
+              <div className="flex items-center justify-between">
+                <Label>File Selezionati</Label>
+                <span className="text-sm font-medium text-primary">{files.length} file</span>
+              </div>
               <div className="max-h-[200px] overflow-y-auto space-y-2 rounded-md border p-3">
                 {files.map((file, index) => (
                   <div
@@ -282,21 +304,38 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, 
                       size="sm"
                       onClick={() => removeFile(index)}
                       className="h-6 w-6 p-0 ml-2"
+                      disabled={loading}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
               </div>
+              <Alert variant="default" className="mt-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Totale: {formatFileSize(files.reduce((acc, f) => acc + f.size, 0))}
+                </AlertDescription>
+              </Alert>
             </div>
           )}
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={handleClose}>
+          <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
             Annulla
           </Button>
-          <Button type="button" onClick={handleSubmit} disabled={loading}>
-            {loading ? "Caricamento..." : "Carica"}
+          <Button type="button" onClick={handleSubmit} disabled={loading || files.length === 0}>
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Caricamento in corso...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                Carica {files.length > 0 ? `(${files.length})` : ''}
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -304,10 +304,12 @@ export async function createUpload(
   }
 
   const formData = new FormData();
-  formData.append('mansione', mansione);
-  formData.append('reparto', reparto);
-  formData.append('ruolo', ruolo);
-  files.forEach(file => formData.append('files', file));
+  if (mansione) formData.append('mansione', mansione);
+  if (reparto) formData.append('reparto', reparto);
+  if (ruolo) formData.append('ruolo', ruolo);
+  
+  // IMPORTANT: Use 'files[]' for Laravel array handling
+  files.forEach(file => formData.append('files[]', file));
 
   return apiClient.upload<ElaborationUpload>(`/elaborations/${elaborationId}/uploads`, formData);
 }
