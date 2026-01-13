@@ -315,7 +315,7 @@ export const mockElaborations: Elaboration[] = [
     id: 3,
     title: "Formazione SafeWork 2024",
     description: "Documentazione formazione sicurezza",
-    status: "bozza",
+    status: "pending",
     company_id: 3,
     company_name: "SafeWork Consulting",
     begin_process: "2024-02-15T11:00:00Z",
