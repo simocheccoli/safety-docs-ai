@@ -334,100 +334,30 @@ export async function deleteUpload(elaborationId: number, uploadId: number): Pro
   return apiClient.delete(`/elaborations/${elaborationId}/uploads/${uploadId}`);
 }
 
-// Payload type for external service
-export interface FilePayload {
-  file_id: number;
-  filename: string;
-  file_path: string;
-  size: number;
-  mansione: string;
-  reparto: string;
-  ruolo: string;
-}
 
-export interface GenerateExcelPayload {
-  elaboration_id: number;
-  elaboration_title: string;
-  company_name: string | null;
-  files: FilePayload[];
-}
-
-export async function generateExcel(elaborationId: number, uploadId?: number): Promise<GenerateExcelPayload> {
-  const elaboration = mockElaborations.find(e => e.id === elaborationId);
-  let uploads = mockUploads.filter(u => u.elaboration_id === elaborationId);
-  
-  // If uploadId is provided, filter to only that upload
-  if (uploadId) {
-    uploads = uploads.filter(u => u.id === uploadId);
-  }
-  
-  if (!elaboration) {
-    throw new Error('Elaboration not found');
-  }
-
-  // Build the payload with one entry per file including mansione/reparto/ruolo
-  const filesPayload: FilePayload[] = [];
-  
-  for (const upload of uploads) {
-    for (const file of upload.files) {
-      filesPayload.push({
-        file_id: file.id,
-        filename: file.filename,
-        file_path: `/storage/elaborations/${elaborationId}/uploads/${upload.id}/${file.filename}`,
-        size: file.size,
-        mansione: upload.mansione,
-        reparto: upload.reparto,
-        ruolo: upload.ruolo,
-      });
-    }
-  }
-
-  const payload: GenerateExcelPayload = {
-    elaboration_id: elaborationId,
-    elaboration_title: elaboration.title,
-    company_name: elaboration.company_name,
-    files: filesPayload,
-  };
-
+export async function generateElaboration(elaborationId: number): Promise<void> {
   if (isDemoMode()) {
     await simulateDelay(1000);
     
-    // Log the payload that would be sent
-    console.log('📤 POST payload per servizio esterno:', JSON.stringify(payload, null, 2));
-    
-    // Update the specific upload status if uploadId is provided
-    if (uploadId) {
-      const upload = mockUploads.find(u => u.id === uploadId);
-      if (upload) {
-        upload.status = 'elaborating';
-      }
-    } else {
-      elaboration.status = 'elaborating';
+    const elaboration = mockElaborations.find(e => e.id === elaborationId);
+    if (!elaboration) {
+      throw new Error('Elaboration not found');
     }
+    
+    elaboration.status = 'elaborating';
     elaboration.updated_at = new Date().toISOString();
     
     // Simulate processing completion after 3 seconds
     setTimeout(() => {
-      if (uploadId) {
-        const upload = mockUploads.find(u => u.id === uploadId);
-        if (upload) {
-          upload.status = 'completed';
-        }
-      } else {
-        elaboration.status = 'completed';
-      }
+      elaboration.status = 'completed';
       elaboration.end_process = new Date().toISOString();
       elaboration.updated_at = new Date().toISOString();
     }, 3000);
     
-    return payload;
+    return;
   }
 
-  const endpoint = uploadId 
-    ? `/elaborations/${elaborationId}/uploads/${uploadId}/generate`
-    : `/elaborations/${elaborationId}/generate`;
-  await apiClient.post(endpoint);
-  return payload;
+  await apiClient.post(`/elaborations/${elaborationId}/generate`);
 }
 
 export async function downloadExcel(id: number): Promise<void> {
