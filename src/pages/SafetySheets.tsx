@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Eye, Trash2, Calendar, ArrowUpDown, ArrowUp, ArrowDown, X, Building2, FileText, FolderUp } from "lucide-react";
+import { Plus, Eye, Trash2, Calendar, ArrowUpDown, ArrowUp, ArrowDown, X, Building2, FileText, FolderUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Elaboration } from "@/types/elaboration";
@@ -138,20 +138,27 @@ export default function SafetySheets() {
   };
 
   const getStatusBadge = (status: string) => {
-    const configs = {
-      bozza: { 
-        label: "Bozza", 
+    const configs: Record<string, { label: string; dotColor: string; textColor: string; showSpinner?: boolean }> = {
+      pending: { 
+        label: "In attesa", 
         dotColor: "bg-muted-foreground",
         textColor: "text-muted-foreground"
       },
+      processing: { 
+        label: "In elaborazione", 
+        dotColor: "bg-amber-500",
+        textColor: "text-muted-foreground",
+        showSpinner: true
+      },
       elaborating: { 
         label: "In elaborazione", 
-        dotColor: "bg-warning",
-        textColor: "text-muted-foreground"
+        dotColor: "bg-amber-500",
+        textColor: "text-muted-foreground",
+        showSpinner: true
       },
       completed: { 
         label: "Completato", 
-        dotColor: "bg-success",
+        dotColor: "bg-green-600",
         textColor: "text-muted-foreground"
       },
       error: { 
@@ -160,10 +167,14 @@ export default function SafetySheets() {
         textColor: "text-muted-foreground"
       },
     };
-    const config = configs[status as keyof typeof configs] || configs.bozza;
+    const config = configs[status] || configs.pending;
     return (
       <div className="flex items-center gap-2">
-        <div className={`h-2 w-2 rounded-full ${config.dotColor}`} />
+        {config.showSpinner ? (
+          <Loader2 className="h-3 w-3 animate-spin text-amber-500" />
+        ) : (
+          <div className={`h-2 w-2 rounded-full ${config.dotColor}`} />
+        )}
         <span className={`text-sm ${config.textColor}`}>{config.label}</span>
       </div>
     );
@@ -378,8 +389,8 @@ export default function SafetySheets() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tutti gli stati</SelectItem>
-                  <SelectItem value="bozza">Bozza</SelectItem>
-                  <SelectItem value="elaborating">In elaborazione</SelectItem>
+                  <SelectItem value="pending">In attesa</SelectItem>
+                  <SelectItem value="processing">In elaborazione</SelectItem>
                   <SelectItem value="completed">Completato</SelectItem>
                   <SelectItem value="error">Errore</SelectItem>
                 </SelectContent>
