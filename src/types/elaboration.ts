@@ -61,7 +61,7 @@ export interface ElaborationUpload {
   files: ElaborationFile[];
   createdAt?: string; // OpenAPI uses camelCase
   created_at?: string; // Legacy alias
-  status?: 'pending' | 'elaborating' | 'completed' | 'error'; // Legacy
+  
 }
 
 // Aligned with OpenAPI spec: components/schemas/ElaborationFile
@@ -144,7 +144,6 @@ export const mapUploadFromBackend = (data: any): ElaborationUpload => ({
   files: (data.files || []).map(mapFileFromBackend),
   createdAt: data.createdAt || data.created_at,
   created_at: data.createdAt || data.created_at,
-  status: data.status,
 });
 
 // Helper to map file from backend

@@ -345,7 +345,6 @@ export const mockElaborationUploads: ElaborationUpload[] = [
     mansione: "Operatore",
     reparto: "Produzione",
     ruolo: "Senior",
-    status: "completed",
     created_at: "2024-01-10T09:30:00Z",
     files: [
       createFile(1, 1, "scheda_operatore_prod.pdf", 245000, "2024-01-10T09:30:00Z"),
@@ -359,7 +358,6 @@ export const mockElaborationUploads: ElaborationUpload[] = [
     mansione: "Tecnico",
     reparto: "Qualità",
     ruolo: "Supervisor",
-    status: "completed",
     created_at: "2024-01-10T10:00:00Z",
     files: [
       createFile(4, 2, "scheda_tecnico_qa.pdf", 320000, "2024-01-10T10:00:00Z"),
@@ -372,7 +370,6 @@ export const mockElaborationUploads: ElaborationUpload[] = [
     mansione: "Magazziniere",
     reparto: "Logistica",
     ruolo: "Junior",
-    status: "completed",
     created_at: "2024-01-10T11:00:00Z",
     files: [
       createFile(6, 3, "scheda_magazzino.pdf", 210000, "2024-01-10T11:00:00Z"),
@@ -386,7 +383,6 @@ export const mockElaborationUploads: ElaborationUpload[] = [
     mansione: "Sviluppatore",
     reparto: "IT",
     ruolo: "Senior",
-    status: "elaborating",
     created_at: "2024-02-01T10:30:00Z",
     files: [
       createFile(9, 4, "scheda_vdu.pdf", 150000, "2024-02-01T10:30:00Z"),
@@ -399,7 +395,6 @@ export const mockElaborationUploads: ElaborationUpload[] = [
     mansione: "Analista",
     reparto: "IT",
     ruolo: "Mid",
-    status: "pending",
     created_at: "2024-02-01T11:00:00Z",
     files: [
       createFile(11, 5, "scheda_analista.pdf", 185000, "2024-02-01T11:00:00Z"),
@@ -413,7 +408,6 @@ export const mockElaborationUploads: ElaborationUpload[] = [
     mansione: "Consulente",
     reparto: "Consulenza",
     ruolo: "Expert",
-    status: "pending",
     created_at: "2024-02-15T11:30:00Z",
     files: [
       createFile(14, 6, "scheda_consulente.pdf", 200000, "2024-02-15T11:30:00Z"),

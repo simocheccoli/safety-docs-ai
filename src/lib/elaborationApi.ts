@@ -68,7 +68,6 @@ const mockUploads: ElaborationUpload[] = [
       { id: 3, upload_id: 1, filename: "scheda_oli_lubrificanti.pdf", size: 720000, created_at: new Date(2024, 10, 15).toISOString() },
     ],
     created_at: new Date(2024, 10, 15).toISOString(),
-    status: 'completed',
   },
   {
     id: 2,
@@ -81,7 +80,6 @@ const mockUploads: ElaborationUpload[] = [
       { id: 5, upload_id: 2, filename: "scheda_radiazioni.pdf", size: 980000, created_at: new Date(2024, 10, 15).toISOString() },
     ],
     created_at: new Date(2024, 10, 15).toISOString(),
-    status: 'completed',
   },
   {
     id: 3,
@@ -95,7 +93,6 @@ const mockUploads: ElaborationUpload[] = [
       { id: 8, upload_id: 3, filename: "scheda_attrezzature.pdf", size: 670000, created_at: new Date(2024, 10, 15).toISOString() },
     ],
     created_at: new Date(2024, 10, 15).toISOString(),
-    status: 'completed',
   },
   {
     id: 4,
@@ -108,7 +105,6 @@ const mockUploads: ElaborationUpload[] = [
       { id: 10, upload_id: 4, filename: "scheda_carrelli.pdf", size: 650000, created_at: new Date(2024, 11, 1).toISOString() },
     ],
     created_at: new Date(2024, 11, 1).toISOString(),
-    status: 'elaborating',
   },
   {
     id: 5,
@@ -122,7 +118,6 @@ const mockUploads: ElaborationUpload[] = [
       { id: 13, upload_id: 5, filename: "scheda_adesivi.pdf", size: 380000, created_at: new Date(2024, 11, 1).toISOString() },
     ],
     created_at: new Date(2024, 11, 1).toISOString(),
-    status: 'pending',
   },
   {
     id: 6,
@@ -135,7 +130,6 @@ const mockUploads: ElaborationUpload[] = [
       { id: 15, upload_id: 6, filename: "scheda_ergonomia.pdf", size: 280000, created_at: new Date(2024, 11, 5).toISOString() },
     ],
     created_at: new Date(2024, 11, 5).toISOString(),
-    status: 'pending',
   },
 ];
 
@@ -288,7 +282,6 @@ export async function createUpload(
       ruolo,
       files: newFiles,
       created_at: new Date().toISOString(),
-      status: 'pending',
     };
     mockUploads.push(newUpload);
 
