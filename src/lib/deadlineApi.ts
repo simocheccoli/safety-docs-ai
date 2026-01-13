@@ -13,8 +13,6 @@ let mockDeadlines: Deadline[] = [
     note: "Contattare RSPP prima della visita",
     company_id: 1,
     company_name: "Bio5 S.r.l.",
-    risk_id: "1",
-    risk_name: "Rischio Fonometrico",
     last_visit_date: "2024-06-15",
     next_visit_date: "2025-06-15",
     next_visit_interval: '12',
@@ -28,8 +26,6 @@ let mockDeadlines: Deadline[] = [
     description: "Verifica delle condizioni di sicurezza",
     company_id: 2,
     company_name: "Tech Solutions S.p.A.",
-    risk_id: "2",
-    risk_name: "Rischio Chimico",
     last_visit_date: "2024-12-01",
     next_visit_date: "2025-03-01",
     next_visit_interval: '3',
@@ -57,8 +53,6 @@ let mockDeadlines: Deadline[] = [
     description: "Verifica conformità normativa",
     company_id: 2,
     company_name: "Tech Solutions S.p.A.",
-    risk_id: "3",
-    risk_name: "Rischio Biologico",
     next_visit_interval: 'on_request',
     status: 'pending',
     created_at: new Date().toISOString(),
@@ -108,7 +102,7 @@ export const deadlineApi = {
     return apiClient.get<Deadline>(`/deadlines/${id}`);
   },
 
-  async create(data: CreateDeadlineData, companyName?: string, riskName?: string): Promise<Deadline> {
+  async create(data: CreateDeadlineData, companyName?: string): Promise<Deadline> {
     if (isDemoMode()) {
       await simulateDelay(400);
       
@@ -121,7 +115,6 @@ export const deadlineApi = {
         ...data,
         id: mockDeadlineIdCounter++,
         company_name: companyName,
-        risk_name: riskName,
         next_visit_date: nextVisitDate,
         status: calculateStatus(nextVisitDate),
         created_at: new Date().toISOString(),
@@ -134,7 +127,7 @@ export const deadlineApi = {
     return apiClient.post<Deadline>('/deadlines', data);
   },
 
-  async update(id: number, data: Partial<CreateDeadlineData>, companyName?: string, riskName?: string): Promise<Deadline> {
+  async update(id: number, data: Partial<CreateDeadlineData>, companyName?: string): Promise<Deadline> {
     if (isDemoMode()) {
       await simulateDelay(300);
       const index = mockDeadlines.findIndex(d => d.id === id);
@@ -152,7 +145,6 @@ export const deadlineApi = {
         ...mockDeadlines[index],
         ...data,
         company_name: companyName ?? mockDeadlines[index].company_name,
-        risk_name: riskName ?? mockDeadlines[index].risk_name,
         next_visit_date: nextVisitDate,
         status: calculateStatus(nextVisitDate),
         updated_at: new Date().toISOString()
