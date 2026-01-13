@@ -37,7 +37,7 @@ import {
   fetchElaborationById, 
   fetchElaborationUploads, 
   deleteUpload, 
-  generateExcel,
+  generateElaboration,
   downloadExcel,
   downloadZip,
   fetchFilePreview
@@ -62,7 +62,9 @@ export default function SafetySheetDetail() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [uploadToDelete, setUploadToDelete] = useState<number | null>(null);
-  const [generatingExcel, setGeneratingExcel] = useState<number | null>(null);
+  const [generatingElaboration, setGeneratingElaboration] = useState(false);
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
+  const [downloadingZip, setDownloadingZip] = useState(false);
   const [expandedUploads, setExpandedUploads] = useState<Set<number>>(new Set());
   const [previewFile, setPreviewFile] = useState<FileWithContext | null>(null);
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
@@ -137,44 +139,68 @@ export default function SafetySheetDetail() {
     }
   };
 
-  const handleGenerateExcel = async (uploadId: number) => {
+  const handleGenerateElaboration = async () => {
     if (!elaboration) return;
     
-    setGeneratingExcel(uploadId);
+    setGeneratingElaboration(true);
     try {
-      await generateExcel(elaboration.id, uploadId);
+      await generateElaboration(elaboration.id);
       toast({
         title: "Elaborazione avviata",
-        description: "La generazione del documento Excel è stata avviata. Lo stato verrà aggiornato al completamento.",
+        description: "La generazione è stata avviata. Lo stato verrà aggiornato al completamento.",
       });
       loadData();
     } catch (error) {
       toast({
         title: "Errore",
-        description: "Impossibile avviare la generazione del documento",
+        description: "Impossibile avviare la generazione",
         variant: "destructive",
       });
     } finally {
-      setGeneratingExcel(null);
+      setGeneratingElaboration(false);
     }
   };
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = async () => {
     if (!elaboration) return;
-    downloadExcel(elaboration.id);
-    toast({
-      title: "Download avviato",
-      description: "Il file Excel verrà scaricato a breve",
-    });
+    
+    setDownloadingExcel(true);
+    try {
+      await downloadExcel(elaboration.id);
+      toast({
+        title: "Download completato",
+        description: "Il file Excel è stato scaricato",
+      });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile scaricare il file Excel",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingExcel(false);
+    }
   };
 
-  const handleDownloadZip = () => {
+  const handleDownloadZip = async () => {
     if (!elaboration) return;
-    downloadZip(elaboration.id);
-    toast({
-      title: "Download avviato",
-      description: "Il file ZIP verrà scaricato a breve",
-    });
+    
+    setDownloadingZip(true);
+    try {
+      await downloadZip(elaboration.id);
+      toast({
+        title: "Download completato",
+        description: "Il file ZIP è stato scaricato",
+      });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile scaricare il file ZIP",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingZip(false);
+    }
   };
 
   const toggleUploadExpansion = (uploadId: number) => {
@@ -244,16 +270,24 @@ export default function SafetySheetDetail() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const getStatusBadge = (status: string) => {
-    const configs: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  const getStatusBadge = (status: string, size: 'sm' | 'lg' = 'sm') => {
+    const configs: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
       bozza: { label: "Bozza", variant: "secondary" },
       pending: { label: "In attesa", variant: "outline" },
-      elaborating: { label: "In elaborazione", variant: "default" },
-      completed: { label: "Completato", variant: "default" },
+      elaborating: { label: "In elaborazione", variant: "default", className: "bg-amber-500 hover:bg-amber-500" },
+      completed: { label: "Completato", variant: "default", className: "bg-green-600 hover:bg-green-600" },
       error: { label: "Errore", variant: "destructive" },
     };
     const config = configs[status] || configs.bozza;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    return (
+      <Badge 
+        variant={config.variant} 
+        className={`${config.className || ''} ${size === 'lg' ? 'px-3 py-1 text-sm' : ''}`}
+      >
+        {status === 'elaborating' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+        {config.label}
+      </Badge>
+    );
   };
 
   if (loading) {
@@ -264,8 +298,10 @@ export default function SafetySheetDetail() {
     return null;
   }
 
-  const canGenerateExcel = uploads.length > 0 && elaboration.status === 'bozza';
-  const canDownload = elaboration.status === 'completed';
+  const canGenerate = uploads.length > 0 && (elaboration.status === 'bozza' || elaboration.status === 'pending');
+  const canDownloadExcel = elaboration.status === 'completed';
+  const canDownloadZip = elaboration.status === 'completed';
+  const isProcessing = elaboration.status === 'elaborating';
 
   return (
     <TooltipProvider>
@@ -281,7 +317,7 @@ export default function SafetySheetDetail() {
                 <h1 className="text-2xl font-semibold text-foreground tracking-tight">
                   {elaboration.title}
                 </h1>
-                {getStatusBadge(elaboration.status)}
+                {getStatusBadge(elaboration.status, 'lg')}
               </div>
               {elaboration.description && (
                 <p className="text-sm text-muted-foreground mt-1">{elaboration.description}</p>
@@ -301,26 +337,52 @@ export default function SafetySheetDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {canDownload && (
-              <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={handleDownloadExcel}>
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Scarica Excel</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={handleDownloadZip}>
-                      <Archive className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Scarica ZIP</TooltipContent>
-                </Tooltip>
-              </>
-            )}
+            <Button
+              onClick={handleGenerateElaboration}
+              disabled={!canGenerate || generatingElaboration || isProcessing}
+              className="gap-2"
+            >
+              {generatingElaboration || isProcessing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="h-4 w-4" />
+              )}
+              Genera Excel
+            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={handleDownloadExcel}
+                  disabled={!canDownloadExcel || downloadingExcel}
+                >
+                  {downloadingExcel ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Scarica Excel</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={handleDownloadZip}
+                  disabled={!canDownloadZip || downloadingZip}
+                >
+                  {downloadingZip ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Archive className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Scarica ZIP</TooltipContent>
+            </Tooltip>
           </div>
         </div>
 
@@ -446,24 +508,6 @@ export default function SafetySheetDetail() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleGenerateExcel(upload.id)}
-                                    disabled={upload.status === 'elaborating' || generatingExcel === upload.id}
-                                    className="hover:bg-primary/10"
-                                  >
-                                    {generatingExcel === upload.id ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <FileSpreadsheet className="h-4 w-4 text-primary" />
-                                    )}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Genera Excel</TooltipContent>
-                              </Tooltip>
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
