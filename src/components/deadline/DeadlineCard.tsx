@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Deadline, INTERVAL_LABELS } from "@/types/deadline";
-import { Building2, Calendar, Clock, MoreVertical, Pencil, Trash2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Building2, Calendar, Clock, MoreVertical, Pencil, Trash2, CheckCircle2, AlertTriangle, Shield } from "lucide-react";
 
 interface DeadlineCardProps {
   deadline: Deadline;
@@ -49,6 +49,13 @@ export function DeadlineCard({ deadline, onEdit, onDelete, onComplete }: Deadlin
                 <Building2 className="h-3.5 w-3.5" />
                 {deadline.company_name || `Azienda #${deadline.company_id}`}
               </span>
+              
+              {deadline.risk_name && (
+                <span className="flex items-center gap-1.5">
+                  <Shield className="h-3.5 w-3.5" />
+                  {deadline.risk_name}
+                </span>
+              )}
               
               <span className="flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
