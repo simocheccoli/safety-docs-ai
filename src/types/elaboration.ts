@@ -1,5 +1,5 @@
 // Aligned with OpenAPI spec: components/schemas/Elaboration
-export type ElaborationStatus = 'pending' | 'processing' | 'elaborating' | 'completed' | 'error';
+export type ElaborationStatus = 'pending' | 'processing' | 'elaborating' | 'completed' | 'error' | 'interrupted';
 
 export const ELABORATION_STATUS_LABELS: Record<ElaborationStatus, string> = {
   'pending': 'In Attesa',
@@ -7,10 +7,32 @@ export const ELABORATION_STATUS_LABELS: Record<ElaborationStatus, string> = {
   'elaborating': 'In Elaborazione',
   'completed': 'Completato',
   'error': 'Errore',
+  'interrupted': 'Interrotta',
 };
 
 // Aligned with OpenAPI spec: components/schemas/Elaboration
 // Supports both camelCase (OpenAPI) and snake_case (legacy)
+export interface ElaborationError {
+  filename: string;
+  error: string;
+  step?: string;
+}
+
+export interface ElaborationUpdate {
+  id: number;
+  elaborationId: number;
+  status: string | null;
+  current: number | null;
+  total: number | null;
+  progress: number | null;
+  stage: string | null;
+  message: string | null;
+  errors: ElaborationError[] | null;
+  metadata: Record<string, any> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Elaboration {
   id: number;
   title: string;
@@ -24,6 +46,13 @@ export interface Elaboration {
   uploads_count?: number; // Legacy alias
   fileCount?: number; // OpenAPI uses camelCase
   files_count?: number; // Legacy alias
+  current?: number; // File elaborati
+  total?: number; // File totali
+  progress?: number; // Percentuale (0-100)
+  errors?: ElaborationError[]; // Array di errori
+  errorCount?: number; // Numero di errori
+  stage?: string; // download, conversion, extraction, excel_generation, upload, completed
+  message?: string; // Messaggio descrittivo dello stato corrente
   createdAt?: string; // OpenAPI uses camelCase
   created_at?: string; // Legacy alias
   updatedAt?: string; // OpenAPI uses camelCase
@@ -103,6 +132,13 @@ export const mapElaborationFromBackend = (data: any): Elaboration => ({
   uploads_count: data.uploadCount || data.uploads_count,
   fileCount: data.fileCount || data.files_count,
   files_count: data.fileCount || data.files_count,
+  current: data.current,
+  total: data.total,
+  progress: data.progress,
+  errors: data.errors || [],
+  errorCount: data.errorCount || (data.errors ? data.errors.length : 0),
+  stage: data.stage,
+  message: data.message,
   createdAt: data.createdAt || data.created_at,
   created_at: data.createdAt || data.created_at,
   updatedAt: data.updatedAt || data.updated_at,

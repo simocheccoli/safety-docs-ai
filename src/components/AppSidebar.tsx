@@ -1,4 +1,4 @@
-import { Home, FlaskConical, FileText, LogOut, User, Users, Settings, FileCheck, Building2, CalendarClock, Trash2 } from "lucide-react";
+import { Home, FlaskConical, FileText, LogOut, User, Users, Settings, FileCheck, Building2, CalendarClock, Trash2, Sparkles } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -14,13 +14,16 @@ import {
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { getCurrentUser, logout } from "@/lib/auth";
+import { useChangelogNotification } from "@/hooks/useChangelogNotification";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Creazione DVR", url: "/dvr", icon: FileCheck },
   { title: "Aziende", url: "/companies", icon: Building2 },
   { title: "Scadenziario", url: "/deadlines", icon: CalendarClock },
+  { title: "Novità", url: "/changelog", icon: Sparkles },
 ];
 
 const riskItems = [
@@ -36,6 +39,7 @@ export function AppSidebar() {
         : currentUser.name || currentUser.email || 'Utente')
     : 'Utente';
   const isAdmin = currentUser?.role.toLowerCase() === 'admin';
+  const { unreadCount } = useChangelogNotification();
 
   const handleLogout = () => {
     logout();
@@ -71,6 +75,11 @@ export function AppSidebar() {
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
+                      {item.title === "Novità" && unreadCount > 0 && (
+                        <Badge variant="destructive" className="ml-auto h-5 min-w-5 px-1.5 text-xs">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </Badge>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -160,6 +169,21 @@ export function AppSidebar() {
                       >
                         <Trash2 className="h-4 w-4" />
                         <span>Cestino</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to="/changelog/admin"
+                        className={({ isActive }) => 
+                          isActive 
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        }
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        <span>Gestione Changelog</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

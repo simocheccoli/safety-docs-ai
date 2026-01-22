@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, FileSpreadsheet, Download, Archive, Building2, Calendar, FileText, FolderUp, Briefcase, Building, User, ChevronDown, ChevronRight, Eye, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, FileSpreadsheet, Download, Archive, Building2, Calendar, FileText, FolderUp, Briefcase, Building, User, ChevronDown, ChevronRight, Eye, X, Loader2, Square, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DetailPageSkeleton, UploadListSkeleton, StatCardGridSkeleton } from "@/components/ui/loading-skeletons";
@@ -26,16 +26,21 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { Elaboration, ElaborationUpload, ElaborationFile } from "@/types/elaboration";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Elaboration, ElaborationUpload, ElaborationFile, ElaborationUpdate } from "@/types/elaboration";
 import { 
   fetchElaborationById, 
   fetchElaborationUploads, 
+  fetchElaborationLogs,
   deleteUpload,
   deleteFile,
   generateElaboration,
+  cancelElaboration,
   downloadExcel,
   downloadZip,
 } from "@/lib/elaborationApi";
+import { useElaborationSSE } from "@/hooks/useElaborationSSE";
 import { useToast } from "@/hooks/use-toast";
 import { NewUploadDialog } from "@/components/safety-sheets/NewUploadDialog";
 import { useFilePreview } from "@/contexts/FilePreviewContext";
@@ -53,16 +58,20 @@ export default function SafetySheetDetail() {
   
   const [elaboration, setElaboration] = useState<Elaboration | null>(null);
   const [uploads, setUploads] = useState<ElaborationUpload[]>([]);
+  const [logs, setLogs] = useState<ElaborationUpdate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingLogs, setLoadingLogs] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [uploadToDelete, setUploadToDelete] = useState<number | null>(null);
   const [deleteFileDialogOpen, setDeleteFileDialogOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<{uploadId: number, fileId: number} | null>(null);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [generatingElaboration, setGeneratingElaboration] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [downloadingZip, setDownloadingZip] = useState(false);
   const [expandedUploads, setExpandedUploads] = useState<Set<number>>(new Set());
+  const [logsExpanded, setLogsExpanded] = useState(false);
   const { openPreview } = useFilePreview();
 
   useEffect(() => {
@@ -70,6 +79,56 @@ export default function SafetySheetDetail() {
       loadData();
     }
   }, [id]);
+
+  // SSE per aggiornamenti in tempo reale
+  const { data: sseData } = useElaborationSSE(
+    elaboration?.id ?? null,
+    {
+      enabled: elaboration?.status === 'processing' || elaboration?.status === 'elaborating' || elaboration?.status === 'error' || elaboration?.status === 'interrupted',
+      onUpdate: (update) => {
+        // Aggiorna lo stato locale con i dati SSE
+        if (elaboration) {
+          const previousErrorCount = elaboration.errorCount || 0;
+          const newErrorCount = update.errorCount || 0;
+          
+          // Mostra toast quando vengono rilevati nuovi errori
+          if (newErrorCount > previousErrorCount && update.errors && update.errors.length > 0) {
+            const newErrors = update.errors.slice(previousErrorCount);
+            newErrors.forEach((error) => {
+              toast({
+                title: "Errore durante l'elaborazione",
+                description: `${error.filename || 'File'}: ${error.error}`,
+                variant: "destructive",
+                duration: 5000,
+              });
+            });
+          }
+          
+          // Mostra toast quando l'elaborazione termina con errori
+          if ((update.status === 'error' || update.status === 'interrupted') && newErrorCount > 0 && previousErrorCount === 0) {
+            toast({
+              title: update.status === 'interrupted' ? "Elaborazione interrotta" : "Elaborazione completata con errori",
+              description: `${newErrorCount} errore${newErrorCount > 1 ? 'i' : ''} rilevato${newErrorCount > 1 ? 'i' : ''} durante l'elaborazione`,
+              variant: "destructive",
+              duration: 7000,
+            });
+          }
+          
+          setElaboration({
+            ...elaboration,
+            status: update.status as any,
+            current: update.current,
+            total: update.total,
+            progress: update.progress,
+            errors: update.errors,
+            errorCount: update.errorCount,
+            stage: update.stage,
+            message: update.message,
+          });
+        }
+      },
+    }
+  );
 
   const loadData = async () => {
     setLoading(true);
@@ -89,8 +148,33 @@ export default function SafetySheetDetail() {
         return;
       }
       
+      // Debug: log per vedere i dati che arrivano
+      console.log('Elaboration data:', {
+        status: elabResult.status,
+        current: elabResult.current,
+        total: elabResult.total,
+        progress: elabResult.progress,
+        errors: elabResult.errors,
+        errorCount: elabResult.errorCount
+      });
+      
+      // Mostra toast se ci sono errori quando viene caricata l'elaborazione
+      if (elabResult.errorCount && elabResult.errorCount > 0 && (elabResult.status === 'error' || elabResult.status === 'interrupted')) {
+        toast({
+          title: elabResult.status === 'interrupted' ? "Elaborazione interrotta" : "Elaborazione completata con errori",
+          description: `${elabResult.errorCount} errore${elabResult.errorCount > 1 ? 'i' : ''} rilevato${elabResult.errorCount > 1 ? 'i' : ''} durante l'elaborazione`,
+          variant: "destructive",
+          duration: 7000,
+        });
+      }
+      
       setElaboration(elabResult);
       setUploads(uploadsResult);
+      
+      // Carica i log se ci sono errori o se l'elaborazione è in corso/completata
+      if (elabResult.status === 'error' || elabResult.status === 'interrupted' || elabResult.status === 'processing' || elabResult.status === 'elaborating' || elabResult.status === 'completed') {
+        loadLogs();
+      }
     } catch (error) {
       toast({
         title: "Errore",
@@ -161,9 +245,15 @@ export default function SafetySheetDetail() {
     }
   };
 
-  const handleGenerateElaboration = async () => {
+  const handleGenerateElaboration = () => {
+    // Apri il dialog di conferma
+    setGenerateDialogOpen(true);
+  };
+
+  const confirmGenerateElaboration = async () => {
     if (!elaboration) return;
     
+    setGenerateDialogOpen(false);
     setGeneratingElaboration(true);
     try {
       await generateElaboration(elaboration.id);
@@ -180,6 +270,30 @@ export default function SafetySheetDetail() {
       });
     } finally {
       setGeneratingElaboration(false);
+    }
+  };
+
+  const [cancellingElaboration, setCancellingElaboration] = useState(false);
+
+  const handleCancelElaboration = async () => {
+    if (!elaboration) return;
+    
+    setCancellingElaboration(true);
+    try {
+      await cancelElaboration(elaboration.id);
+      toast({
+        title: "Elaborazione interrotta",
+        description: "L'elaborazione è stata interrotta con successo.",
+      });
+      loadData();
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile interrompere l'elaborazione",
+        variant: "destructive",
+      });
+    } finally {
+      setCancellingElaboration(false);
     }
   };
 
@@ -225,6 +339,19 @@ export default function SafetySheetDetail() {
     }
   };
 
+  const loadLogs = async () => {
+    if (!id) return;
+    setLoadingLogs(true);
+    try {
+      const logsData = await fetchElaborationLogs(Number(id));
+      setLogs(logsData);
+    } catch (error) {
+      console.error('Error loading logs:', error);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
   const toggleUploadExpansion = (uploadId: number) => {
     setExpandedUploads(prev => {
       const next = new Set(prev);
@@ -240,7 +367,7 @@ export default function SafetySheetDetail() {
   const handlePreviewFile = (file: FileWithContext) => {
     openPreview({
       previewUrl: file.previewUrl || '',
-      filename: file.filename,
+      filename: file.originalName || file.filename,
       size: file.size,
       metadata: {
         Mansione: file.mansione,
@@ -276,6 +403,7 @@ export default function SafetySheetDetail() {
       elaborating: { label: "In elaborazione", variant: "default", className: "bg-amber-500 hover:bg-amber-500" },
       completed: { label: "Completato", variant: "default", className: "bg-green-600 hover:bg-green-600" },
       error: { label: "Errore", variant: "destructive" },
+      interrupted: { label: "Interrotta", variant: "outline", className: "bg-orange-500 hover:bg-orange-500 text-white border-orange-600" },
     };
     const config = configs[status] || configs.pending;
     const isProcessing = status === 'processing' || status === 'elaborating';
@@ -298,7 +426,14 @@ export default function SafetySheetDetail() {
     return null;
   }
 
-  const canGenerate = uploads.length > 0 && elaboration.status === 'pending';
+  // Permetti la generazione se ci sono upload e lo stato non è in elaborazione
+  // Permetti anche la rigenerazione se l'elaborazione è completata o in errore
+  const canGenerate = uploads.length > 0 && (
+    elaboration.status === 'pending' || 
+    elaboration.status === 'completed' || 
+    elaboration.status === 'error' || 
+    elaboration.status === 'interrupted'
+  );
   const canDownloadExcel = elaboration.status === 'completed';
   const canDownloadZip = elaboration.status === 'completed';
   const isProcessing = elaboration.status === 'elaborating' || elaboration.status === 'processing';
@@ -337,18 +472,34 @@ export default function SafetySheetDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              onClick={handleGenerateElaboration}
-              disabled={!canGenerate || generatingElaboration || isProcessing}
-              className="gap-2"
-            >
-              {generatingElaboration || isProcessing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <FileSpreadsheet className="h-4 w-4" />
-              )}
-              Genera Excel
-            </Button>
+            {isProcessing ? (
+              <Button
+                onClick={handleCancelElaboration}
+                disabled={cancellingElaboration}
+                variant="destructive"
+                className="gap-2"
+              >
+                {cancellingElaboration ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Square className="h-4 w-4" />
+                )}
+                Interrompi Elaborazione
+              </Button>
+            ) : (
+              <Button
+                onClick={handleGenerateElaboration}
+                disabled={!canGenerate || generatingElaboration}
+                className="gap-2"
+              >
+                {generatingElaboration ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="h-4 w-4" />
+                )}
+                Genera Excel
+              </Button>
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
@@ -432,6 +583,238 @@ export default function SafetySheetDetail() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Progress and Errors Section */}
+        {(isProcessing || (elaboration.errorCount && elaboration.errorCount > 0) || (elaboration.total && elaboration.total > 0) || elaboration.status === 'error' || elaboration.status === 'interrupted') && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Stato Elaborazione</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isProcessing && (
+                <div className="space-y-2">
+                  {elaboration.total && elaboration.total > 0 ? (
+                    <>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          File elaborati: {elaboration.current || 0} di {elaboration.total}
+                        </span>
+                        <span className="font-medium">
+                          {elaboration.progress?.toFixed(1) || 0}%
+                        </span>
+                      </div>
+                      <Progress value={elaboration.progress || 0} className="h-3" />
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Elaborazione in corso... (in attesa di dati di progresso)</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {!isProcessing && elaboration.total && elaboration.total > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      File elaborati: {elaboration.current || 0} di {elaboration.total}
+                    </span>
+                    <span className="font-medium">
+                      {elaboration.progress?.toFixed(1) || 0}%
+                    </span>
+                  </div>
+                  <Progress value={elaboration.progress || 0} className="h-3" />
+                </div>
+              )}
+              
+              {/* Mostra sempre gli errori se presenti, anche se non c'è progresso */}
+              {elaboration.errors && elaboration.errors.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>
+                    {elaboration.errorCount || elaboration.errors.length} errore{elaboration.errorCount !== 1 ? 'i' : ''} durante l'elaborazione
+                  </AlertTitle>
+                  <AlertDescription>
+                    <div className="mt-2 space-y-3">
+                      {elaboration.errors.map((error, index) => (
+                        <div key={index} className="text-sm border-l-2 border-destructive/50 pl-3 py-1">
+                          <div className="font-medium text-destructive mb-1">
+                            {error.filename || 'File sconosciuto'}
+                          </div>
+                          <div className="text-muted-foreground/90 mt-0.5">
+                            {error.step && (
+                              <span className="inline-block px-2 py-0.5 text-xs font-medium bg-destructive/10 text-destructive rounded mr-2 capitalize">
+                                {error.step}
+                              </span>
+                            )}
+                            <span>{error.error}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {/* Mostra messaggio se non ci sono file elaborati ma c'è un errore generale */}
+              {!isProcessing && (!elaboration.total || elaboration.total === 0) && elaboration.status === 'error' && (!elaboration.errors || elaboration.errors.length === 0) && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Errore durante l'elaborazione</AlertTitle>
+                  <AlertDescription>
+                    L'elaborazione non è riuscita. Espandi la sezione "Log di Elaborazione" qui sotto per maggiori dettagli.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Logs Section */}
+        {(elaboration.status === 'error' || elaboration.status === 'interrupted' || elaboration.status === 'processing' || elaboration.status === 'elaborating' || elaboration.status === 'completed' || logs.length > 0) && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Log di Elaborazione</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setLogsExpanded(!logsExpanded);
+                    if (!logsExpanded && logs.length === 0) {
+                      loadLogs();
+                    }
+                  }}
+                  className="gap-2"
+                >
+                  {logsExpanded ? (
+                    <>
+                      <ChevronDown className="h-4 w-4" />
+                      Nascondi
+                    </>
+                  ) : (
+                    <>
+                      <ChevronRight className="h-4 w-4" />
+                      Mostra
+                    </>
+                  )}
+                </Button>
+              </div>
+              <CardDescription>
+                Dettagli completi dell'elaborazione, inclusi aggiornamenti intermedi e errori
+              </CardDescription>
+            </CardHeader>
+            {logsExpanded && (
+              <CardContent>
+                {loadingLogs ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-sm text-muted-foreground">Caricamento log...</span>
+                  </div>
+                ) : logs.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Nessun log disponibile</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                    {logs.map((log, index) => (
+                      <div
+                        key={log.id}
+                        className={`border rounded-lg p-4 ${
+                          log.status === 'error' || log.status === 'interrupted'
+                            ? 'border-destructive/50 bg-destructive/5'
+                            : log.status === 'completed'
+                            ? 'border-green-500/50 bg-green-500/5'
+                            : 'border-border bg-muted/30'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                log.status === 'error' || log.status === 'interrupted'
+                                  ? 'destructive'
+                                  : log.status === 'completed'
+                                  ? 'default'
+                                  : 'secondary'
+                              }
+                              className="text-xs"
+                            >
+                              {log.status || 'N/A'}
+                            </Badge>
+                            {log.stage && (
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {log.stage}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {log.createdAt
+                              ? new Date(log.createdAt).toLocaleString('it-IT', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit',
+                                })
+                              : '-'}
+                          </span>
+                        </div>
+                        
+                        {log.message && (
+                          <div className="text-sm text-foreground mb-2">{log.message}</div>
+                        )}
+                        
+                        {log.progress !== null && log.total !== null && log.total > 0 && (
+                          <div className="mb-2">
+                            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                              <span>Progresso: {log.current || 0}/{log.total}</span>
+                              <span>{log.progress.toFixed(1)}%</span>
+                            </div>
+                            <Progress value={log.progress} className="h-1.5" />
+                          </div>
+                        )}
+                        
+                        {log.errors && log.errors.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {log.errors.map((error, errorIndex) => (
+                              <div
+                                key={errorIndex}
+                                className="text-xs bg-destructive/10 border-l-2 border-destructive pl-2 py-1 rounded"
+                              >
+                                <div className="font-medium text-destructive">
+                                  {error.filename || 'File sconosciuto'}
+                                </div>
+                                <div className="text-muted-foreground mt-0.5">
+                                  {error.step && <span className="capitalize">{error.step}: </span>}
+                                  {error.error}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {log.metadata && Object.keys(log.metadata).length > 0 && (
+                          <details className="mt-2">
+                            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                              Dettagli tecnici
+                            </summary>
+                            <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-x-auto">
+                              {JSON.stringify(log.metadata, null, 2)}
+                            </pre>
+                          </details>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            )}
+          </Card>
+        )}
 
         {/* Uploads List */}
         <Card>
@@ -542,8 +925,8 @@ export default function SafetySheetDetail() {
                                     <FileText className="h-5 w-5 text-destructive" />
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-sm truncate" title={file.filename}>
-                                      {file.filename}
+                                    <div className="font-medium text-sm truncate" title={file.originalName || file.filename}>
+                                      {file.originalName || file.filename}
                                     </div>
                                     <div className="text-xs text-muted-foreground">
                                       {formatFileSize(file.size)}
@@ -639,6 +1022,35 @@ export default function SafetySheetDetail() {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Elimina
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Conferma generazione Excel</AlertDialogTitle>
+              <AlertDialogDescription>
+                {elaboration?.status === 'completed' || elaboration?.status === 'error' || elaboration?.status === 'interrupted' 
+                  ? "Vuoi rigenerare il file Excel? Il file esistente verrà sovrascritto."
+                  : "Vuoi avviare la generazione del file Excel? Questa operazione potrebbe richiedere alcuni minuti."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annulla</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={confirmGenerateElaboration}
+                disabled={generatingElaboration}
+              >
+                {generatingElaboration ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generazione in corso...
+                  </>
+                ) : (
+                  "Conferma"
+                )}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

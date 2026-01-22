@@ -58,6 +58,9 @@ import { fetchElaborations, deleteElaboration } from "@/lib/elaborationApi";
 import { useToast } from "@/hooks/use-toast";
 import { DatePicker } from "@/components/ui/date-picker";
 import { NewSafetySheetDialog } from "@/components/safety-sheets/NewSafetySheetDialog";
+import { Progress } from "@/components/ui/progress";
+import { AlertTriangle } from "lucide-react";
+import { useElaborationSSE } from "@/hooks/useElaborationSSE";
 
 type SortField = 'title' | 'status' | 'begin_process' | 'uploads_count';
 type SortDirection = 'asc' | 'desc' | null;
@@ -81,6 +84,34 @@ export default function SafetySheets() {
   useEffect(() => {
     loadElaborations();
   }, []);
+
+  // SSE per aggiornamenti in tempo reale - trova la prima elaborazione in corso
+  const processingElaboration = allElaborations.find(
+    (elab) => elab.status === 'processing' || elab.status === 'elaborating'
+  );
+
+  // Usa SSE per aggiornare le elaborazioni in corso
+  useElaborationSSE(processingElaboration?.id ?? null, {
+    enabled: !!processingElaboration,
+    onUpdate: (update) => {
+      // Aggiorna l'elaborazione nella lista
+      setAllElaborations((prev) =>
+        prev.map((item) =>
+          item.id === update.id
+            ? {
+                ...item,
+                status: update.status as any,
+                current: update.current,
+                total: update.total,
+                progress: update.progress,
+                errors: update.errors,
+                errorCount: update.errorCount,
+              }
+            : item
+        )
+      );
+    },
+  });
 
   const loadElaborations = async () => {
     setLoading(true);
@@ -172,6 +203,11 @@ export default function SafetySheets() {
         label: "Errore", 
         dotColor: "bg-destructive",
         textColor: "text-muted-foreground"
+      },
+      interrupted: { 
+        label: "Interrotta", 
+        dotColor: "bg-orange-500",
+        textColor: "text-orange-600 dark:text-orange-400"
       },
     };
     const config = configs[status] || configs.pending;
@@ -524,6 +560,7 @@ export default function SafetySheets() {
                   <SelectItem value="processing">In elaborazione</SelectItem>
                   <SelectItem value="completed">Completato</SelectItem>
                   <SelectItem value="error">Errore</SelectItem>
+                  <SelectItem value="interrupted">Interrotta</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -614,6 +651,7 @@ export default function SafetySheets() {
                     {getSortIcon('status')}
                   </Button>
                 </TableHead>
+                <TableHead className="font-medium text-foreground">Progresso</TableHead>
                 <TableHead className="font-medium text-foreground">
                   <Button
                     variant="ghost"
@@ -631,13 +669,13 @@ export default function SafetySheets() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     Caricamento...
                   </TableCell>
                 </TableRow>
               ) : paginatedElaborations.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     Nessuna scheda di sicurezza trovata
                   </TableCell>
                 </TableRow>
@@ -693,6 +731,37 @@ export default function SafetySheets() {
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(elaboration.status)}</TableCell>
+                    <TableCell>
+                      {(elaboration.status === 'processing' || elaboration.status === 'elaborating') && elaboration.total && elaboration.total > 0 ? (
+                        <div className="space-y-1.5 min-w-[120px]">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">
+                              {elaboration.current || 0}/{elaboration.total}
+                            </span>
+                            <span className="font-medium">
+                              {elaboration.progress?.toFixed(0) || 0}%
+                            </span>
+                          </div>
+                          <Progress 
+                            value={elaboration.progress || 0} 
+                            className="h-2"
+                          />
+                          {elaboration.errorCount && elaboration.errorCount > 0 && (
+                            <div className="flex items-center gap-1 text-xs text-destructive">
+                              <AlertTriangle className="h-3 w-3" />
+                              <span>{elaboration.errorCount} errore{elaboration.errorCount > 1 ? 'i' : ''}</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : elaboration.errorCount && elaboration.errorCount > 0 ? (
+                        <div className="flex items-center gap-1 text-xs text-destructive">
+                          <AlertTriangle className="h-3 w-3" />
+                          <span>{elaboration.errorCount} errore{elaboration.errorCount > 1 ? 'i' : ''}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{formatDate(elaboration.created_at || elaboration.createdAt || elaboration.begin_process)}</TableCell>
                     <TableCell>
                       <div className="flex gap-1 justify-end">

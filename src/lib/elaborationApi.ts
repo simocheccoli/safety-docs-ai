@@ -1,4 +1,4 @@
-import { Elaboration, ElaborationUpload, ElaborationFile } from "@/types/elaboration";
+import { Elaboration, ElaborationUpload, ElaborationFile, ElaborationUpdate } from "@/types/elaboration";
 import { apiClient, simulateDelay } from './apiClient';
 import { isDemoMode, getApiBaseUrl } from './config';
 
@@ -376,6 +376,28 @@ export async function generateElaboration(elaborationId: number): Promise<void> 
   await apiClient.post(`/elaborations/${elaborationId}/generate`);
 }
 
+export async function cancelElaboration(elaborationId: number): Promise<void> {
+  if (isDemoMode()) {
+    await simulateDelay(200);
+    
+    const elaboration = mockElaborations.find(e => e.id === elaborationId);
+    if (!elaboration) {
+      throw new Error('Elaboration not found');
+    }
+    
+    if (elaboration.status !== 'processing' && elaboration.status !== 'elaborating') {
+      throw new Error('Elaborazione non in corso, impossibile interrompere');
+    }
+    
+    elaboration.status = 'error';
+    elaboration.updated_at = new Date().toISOString();
+    
+    return;
+  }
+
+  await apiClient.post(`/elaborations/${elaborationId}/cancel`);
+}
+
 export async function downloadExcel(id: number): Promise<void> {
   if (isDemoMode()) {
     console.log(`Mock: Downloading Excel for elaboration ${id}`);
@@ -424,4 +446,30 @@ export async function fetchFilePreview(previewUrl: string): Promise<string> {
 
   const blob = await apiClient.download(previewUrl);
   return window.URL.createObjectURL(blob);
+}
+
+export async function fetchElaborationLogs(elaborationId: number): Promise<ElaborationUpdate[]> {
+  if (isDemoMode()) {
+    await simulateDelay(200);
+    // Mock logs
+    return [
+      {
+        id: 1,
+        elaborationId,
+        status: 'processing',
+        current: 0,
+        total: 5,
+        progress: 0,
+        stage: 'download',
+        message: 'Inizio download file da S3',
+        errors: null,
+        metadata: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ];
+  }
+
+  const data = await apiClient.get<ElaborationUpdate[]>(`/elaborations/${elaborationId}/logs`);
+  return data;
 }
