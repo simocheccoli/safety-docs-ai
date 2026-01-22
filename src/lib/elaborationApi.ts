@@ -61,7 +61,7 @@ const mockUploads: ElaborationUpload[] = [
     elaboration_id: 1,
     mansione: "Operatore Macchine CNC",
     reparto: "Produzione",
-    ruolo: "Operaio Specializzato",
+    area: "Operaio Specializzato",
     files: [
       { id: 1, upload_id: 1, filename: "scheda_rumore_cnc.pdf", size: 1024000, created_at: new Date(2024, 10, 15).toISOString() },
       { id: 2, upload_id: 1, filename: "scheda_vibrazioni.pdf", size: 856000, created_at: new Date(2024, 10, 15).toISOString() },
@@ -74,7 +74,7 @@ const mockUploads: ElaborationUpload[] = [
     elaboration_id: 1,
     mansione: "Addetto Saldatura",
     reparto: "Assemblaggio",
-    ruolo: "Operaio",
+    area: "Operaio",
     files: [
       { id: 4, upload_id: 2, filename: "scheda_fumi_saldatura.pdf", size: 1200000, created_at: new Date(2024, 10, 15).toISOString() },
       { id: 5, upload_id: 2, filename: "scheda_radiazioni.pdf", size: 980000, created_at: new Date(2024, 10, 15).toISOString() },
@@ -86,7 +86,7 @@ const mockUploads: ElaborationUpload[] = [
     elaboration_id: 1,
     mansione: "Responsabile Qualità",
     reparto: "Controllo Qualità",
-    ruolo: "Impiegato Tecnico",
+    area: "Impiegato Tecnico",
     files: [
       { id: 6, upload_id: 3, filename: "scheda_sostanze_chimiche.pdf", size: 1500000, created_at: new Date(2024, 10, 15).toISOString() },
       { id: 7, upload_id: 3, filename: "scheda_laboratorio.pdf", size: 890000, created_at: new Date(2024, 10, 15).toISOString() },
@@ -99,7 +99,7 @@ const mockUploads: ElaborationUpload[] = [
     elaboration_id: 2,
     mansione: "Carrellista",
     reparto: "Logistica",
-    ruolo: "Operaio",
+    area: "Operaio",
     files: [
       { id: 9, upload_id: 4, filename: "scheda_movimentazione.pdf", size: 780000, created_at: new Date(2024, 11, 1).toISOString() },
       { id: 10, upload_id: 4, filename: "scheda_carrelli.pdf", size: 650000, created_at: new Date(2024, 11, 1).toISOString() },
@@ -111,7 +111,7 @@ const mockUploads: ElaborationUpload[] = [
     elaboration_id: 2,
     mansione: "Addetto Imballaggio",
     reparto: "Spedizioni",
-    ruolo: "Operaio",
+    area: "Operaio",
     files: [
       { id: 11, upload_id: 5, filename: "scheda_imballaggio.pdf", size: 520000, created_at: new Date(2024, 11, 1).toISOString() },
       { id: 12, upload_id: 5, filename: "scheda_nastri.pdf", size: 430000, created_at: new Date(2024, 11, 1).toISOString() },
@@ -124,7 +124,7 @@ const mockUploads: ElaborationUpload[] = [
     elaboration_id: 3,
     mansione: "Impiegato Amministrativo",
     reparto: "Amministrazione",
-    ruolo: "Impiegato",
+    area: "Impiegato",
     files: [
       { id: 14, upload_id: 6, filename: "scheda_vdt.pdf", size: 320000, created_at: new Date(2024, 11, 5).toISOString() },
       { id: 15, upload_id: 6, filename: "scheda_ergonomia.pdf", size: 280000, created_at: new Date(2024, 11, 5).toISOString() },
@@ -182,7 +182,8 @@ export async function createElaboration(
   title: string,
   description: string,
   companyId: number | null,
-  companyName: string | null
+  companyName: string | null,
+  companyBranchId?: number | null
 ): Promise<Elaboration> {
   if (isDemoMode()) {
     await simulateDelay(300);
@@ -209,6 +210,7 @@ export async function createElaboration(
     title,
     description,
     companyId,
+    companyBranchId,
   });
   return mapBackendElaboration(data);
 }
@@ -259,7 +261,7 @@ export async function createUpload(
   elaborationId: number,
   mansione: string,
   reparto: string,
-  ruolo: string,
+  area: string,
   files: File[]
 ): Promise<ElaborationUpload> {
   if (isDemoMode()) {
@@ -279,7 +281,7 @@ export async function createUpload(
       elaboration_id: elaborationId,
       mansione,
       reparto,
-      ruolo,
+      area,
       files: newFiles,
       created_at: new Date().toISOString(),
     };
@@ -299,7 +301,7 @@ export async function createUpload(
   const formData = new FormData();
   if (mansione) formData.append('mansione', mansione);
   if (reparto) formData.append('reparto', reparto);
-  if (ruolo) formData.append('ruolo', ruolo);
+  if (area) formData.append('area', area);
   
   // IMPORTANT: Use 'files[]' for Laravel array handling
   files.forEach(file => formData.append('files[]', file));
@@ -325,6 +327,27 @@ export async function deleteUpload(elaborationId: number, uploadId: number): Pro
   }
 
   return apiClient.delete(`/elaborations/${elaborationId}/uploads/${uploadId}`);
+}
+
+export async function deleteFile(elaborationId: number, uploadId: number, fileId: number): Promise<void> {
+  if (isDemoMode()) {
+    await simulateDelay(200);
+    const upload = mockUploads.find(u => u.id === uploadId && u.elaboration_id === elaborationId);
+    if (upload) {
+      const fileIndex = upload.files.findIndex(f => f.id === fileId);
+      if (fileIndex !== -1) {
+        upload.files.splice(fileIndex, 1);
+        const elaboration = mockElaborations.find(e => e.id === elaborationId);
+        if (elaboration) {
+          elaboration.files_count--;
+          elaboration.updated_at = new Date().toISOString();
+        }
+      }
+    }
+    return;
+  }
+
+  return apiClient.delete(`/elaborations/${elaborationId}/uploads/${uploadId}/media/${fileId}`);
 }
 
 

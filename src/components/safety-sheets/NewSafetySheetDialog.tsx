@@ -33,7 +33,9 @@ export function NewSafetySheetDialog({ open, onOpenChange, onSuccess }: NewSafet
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [companyId, setCompanyId] = useState<string>("");
+  const [companyBranchId, setCompanyBranchId] = useState<string>("");
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -42,6 +44,27 @@ export function NewSafetySheetDialog({ open, onOpenChange, onSuccess }: NewSafet
       loadCompanies();
     }
   }, [open]);
+
+  useEffect(() => {
+    if (companyId) {
+      const company = companies.find(c => c.id.toString() === companyId);
+      setSelectedCompany(company || null);
+      // Auto-select main branch if available
+      if (company?.branches && company.branches.length > 0) {
+        const mainBranch = company.branches.find(b => b.is_main);
+        if (mainBranch && mainBranch.id) {
+          setCompanyBranchId(mainBranch.id.toString());
+        } else {
+          setCompanyBranchId("");
+        }
+      } else {
+        setCompanyBranchId("");
+      }
+    } else {
+      setSelectedCompany(null);
+      setCompanyBranchId("");
+    }
+  }, [companyId, companies]);
 
   const loadCompanies = async () => {
     try {
@@ -69,7 +92,8 @@ export function NewSafetySheetDialog({ open, onOpenChange, onSuccess }: NewSafet
         title.trim(),
         description.trim(),
         selectedCompany ? selectedCompany.id : null,
-        selectedCompany ? selectedCompany.name : null
+        selectedCompany ? selectedCompany.name : null,
+        companyBranchId ? parseInt(companyBranchId) : null
       );
 
       toast({
@@ -80,6 +104,7 @@ export function NewSafetySheetDialog({ open, onOpenChange, onSuccess }: NewSafet
       setTitle("");
       setDescription("");
       setCompanyId("");
+      setCompanyBranchId("");
       onSuccess();
     } catch (error) {
       toast({
@@ -96,6 +121,7 @@ export function NewSafetySheetDialog({ open, onOpenChange, onSuccess }: NewSafet
     setTitle("");
     setDescription("");
     setCompanyId("");
+    setCompanyBranchId("");
     onOpenChange(false);
   };
 
@@ -105,7 +131,7 @@ export function NewSafetySheetDialog({ open, onOpenChange, onSuccess }: NewSafet
         <DialogHeader>
           <DialogTitle>Nuova Scheda di Sicurezza</DialogTitle>
           <DialogDescription>
-            Crea una nuova scheda di sicurezza. Potrai aggiungere i caricamenti con mansione, reparto e ruolo successivamente.
+            Crea una nuova scheda di sicurezza. Potrai aggiungere i caricamenti con mansione, reparto e area successivamente.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -145,6 +171,30 @@ export function NewSafetySheetDialog({ open, onOpenChange, onSuccess }: NewSafet
               </SelectContent>
             </Select>
           </div>
+
+          {selectedCompany && selectedCompany.branches && selectedCompany.branches.length > 0 && (
+            <div className="grid gap-2">
+              <Label htmlFor="branch">Stabilimento</Label>
+              <Select value={companyBranchId || undefined} onValueChange={(value) => setCompanyBranchId(value === "none" ? "" : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleziona uno stabilimento (opzionale)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nessuno stabilimento</SelectItem>
+                  {selectedCompany.branches
+                    .filter((branch) => branch.id != null)
+                    .map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id!.toString()}>
+                        <div className="flex items-center gap-2">
+                          <span>{branch.name}</span>
+                          {branch.is_main && <span className="text-xs text-muted-foreground">(Principale)</span>}
+                        </div>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={handleClose}>

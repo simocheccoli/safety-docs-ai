@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { FilePreviewProvider } from "@/contexts/FilePreviewContext";
+import { FilePreviewDrawer } from "@/components/FilePreviewDrawer";
 import Dashboard from "./pages/Dashboard";
 import SafetySheets from "./pages/SafetySheets";
 import SafetySheetDetail from "./pages/SafetySheetDetail";
@@ -20,6 +22,8 @@ import DVRDetail from "./pages/DVRDetail";
 import DVRDocumentEditor from "./pages/DVRDocumentEditor";
 import DVRWizard from "./pages/DVRWizard";
 import Deadlines from "./pages/Deadlines";
+import DeadlineValidations from "./pages/DeadlineValidations";
+import Trash from "./pages/Trash";
 
 const queryClient = new QueryClient();
 
@@ -27,9 +31,10 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+        <FilePreviewProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route
@@ -50,6 +55,7 @@ const App = () => {
                             <Route path="/safety-sheets/:id" element={<SafetySheetDetail />} />
                             <Route path="/companies" element={<Companies />} />
                             <Route path="/deadlines" element={<Deadlines />} />
+                            <Route path="/deadlines/:id/validations" element={<DeadlineValidations />} />
                             <Route path="/rischi" element={<RiskManagement />} />
                             <Route path="/rischi/:id" element={<RiskDetail />} />
                             <Route path="/dvr" element={<DVRList />} />
@@ -57,6 +63,7 @@ const App = () => {
                             <Route path="/dvr/:id" element={<DVRDetail />} />
                             <Route path="/dvr/:id/document" element={<DVRDocumentEditor />} />
                             <Route path="/users" element={<Users />} />
+                            <Route path="/trash" element={<Trash />} />
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </main>
@@ -68,6 +75,8 @@ const App = () => {
             />
           </Routes>
         </BrowserRouter>
+        <FilePreviewDrawer />
+      </FilePreviewProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

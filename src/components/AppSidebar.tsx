@@ -1,4 +1,4 @@
-import { Home, FlaskConical, FileText, LogOut, User, Users, Settings, FileCheck, Building2, CalendarClock } from "lucide-react";
+import { Home, FlaskConical, FileText, LogOut, User, Users, Settings, FileCheck, Building2, CalendarClock, Trash2 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -30,7 +30,11 @@ const riskItems = [
 export function AppSidebar() {
   const navigate = useNavigate();
   const currentUser = getCurrentUser();
-  const username = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Utente';
+  const username = currentUser 
+    ? (currentUser.firstName && currentUser.lastName 
+        ? `${currentUser.firstName} ${currentUser.lastName}` 
+        : currentUser.name || currentUser.email || 'Utente')
+    : 'Utente';
   const isAdmin = currentUser?.role.toLowerCase() === 'admin';
 
   const handleLogout = () => {
@@ -141,6 +145,21 @@ export function AppSidebar() {
                       >
                         <Users className="h-4 w-4" />
                         <span>Utenti</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to="/trash"
+                        className={({ isActive }) => 
+                          isActive 
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>Cestino</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

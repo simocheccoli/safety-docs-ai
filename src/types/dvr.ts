@@ -45,6 +45,8 @@ export interface DVR {
   stato?: DVRStatus | string; // Legacy alias
   companyId?: number; // OpenAPI uses camelCase
   company_id?: number; // Legacy alias
+  companyBranchId?: number; // OpenAPI uses camelCase
+  company_branch_id?: number; // Legacy alias
   companyName?: string; // OpenAPI uses camelCase
   createdAt?: string; // OpenAPI uses camelCase
   updatedAt?: string; // OpenAPI uses camelCase

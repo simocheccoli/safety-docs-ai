@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Deadline, CreateDeadlineData, NextVisitInterval, INTERVAL_LABELS } from "@/types/deadline";
+import { Deadline, CreateDeadlineData, NextValidationInterval, INTERVAL_LABELS } from "@/types/deadline";
 import { Company } from "@/types/company";
 import { RiskType } from "@/types/risk";
 import { Plus, Building2, ShieldAlert } from "lucide-react";
@@ -14,7 +14,6 @@ import { Plus, Building2, ShieldAlert } from "lucide-react";
 interface DeadlineDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  deadline?: Deadline;
   companies: Company[];
   riskTypes: RiskType[];
   onSave: (data: CreateDeadlineData, companyName?: string, riskTypeName?: string) => Promise<void>;
@@ -24,7 +23,6 @@ interface DeadlineDialogProps {
 export function DeadlineDialog({ 
   open, 
   onOpenChange, 
-  deadline, 
   companies, 
   riskTypes,
   onSave,
@@ -34,35 +32,69 @@ export function DeadlineDialog({
   const [description, setDescription] = useState("");
   const [note, setNote] = useState("");
   const [companyId, setCompanyId] = useState<string>("");
+  const [companyBranchId, setCompanyBranchId] = useState<string>("");
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [riskTypeId, setRiskTypeId] = useState<string>("");
-  const [lastVisitDate, setLastVisitDate] = useState<Date | undefined>();
-  const [nextVisitDate, setNextVisitDate] = useState<Date | undefined>();
-  const [nextVisitInterval, setNextVisitInterval] = useState<NextVisitInterval>("12");
+  const [lastValidationDate, setLastValidationDate] = useState<Date | undefined>();
+  const [nextValidationDate, setNextValidationDate] = useState<Date | undefined>();
+  const [nextValidationInterval, setNextValidationInterval] = useState<NextValidationInterval>("12");
   const [isSaving, setIsSaving] = useState(false);
 
+  // Reset form quando si apre (solo creazione)
   useEffect(() => {
     if (open) {
-      if (deadline) {
-        setTitle(deadline.title);
-        setDescription(deadline.description || "");
-        setNote(deadline.note || "");
-        setCompanyId(deadline.company_id.toString());
-        setRiskTypeId(deadline.risk_type_id || "");
-        setLastVisitDate(deadline.last_visit_date ? new Date(deadline.last_visit_date) : undefined);
-        setNextVisitDate(deadline.next_visit_date ? new Date(deadline.next_visit_date) : undefined);
-        setNextVisitInterval(deadline.next_visit_interval);
-      } else {
-        setTitle("");
-        setDescription("");
-        setNote("");
-        setCompanyId("");
-        setRiskTypeId("");
-        setLastVisitDate(undefined);
-        setNextVisitDate(undefined);
-        setNextVisitInterval("12");
-      }
+      setTitle("");
+      setDescription("");
+      setNote("");
+      setCompanyId("");
+      setCompanyBranchId("");
+      setRiskTypeId("");
+      setLastValidationDate(undefined);
+      setNextValidationDate(undefined);
+      setNextValidationInterval("12");
     }
-  }, [open, deadline]);
+  }, [open]);
+
+  useEffect(() => {
+    if (companyId) {
+      const company = companies.find(c => c.id.toString() === companyId);
+      setSelectedCompany(company || null);
+      
+      if (company?.branches && company.branches.length > 0) {
+        // Se c'è già un branch selezionato e appartiene a questa azienda, mantenerlo
+        // Ignora "none" come valore valido
+        if (companyBranchId && companyBranchId !== "none") {
+          const currentBranch = company.branches.find(b => b.id?.toString() === companyBranchId);
+          if (currentBranch) {
+            // Mantieni la selezione esistente
+            return;
+          }
+        }
+        
+        // Se l'azienda ha esattamente 1 stabilimento, selezionalo automaticamente
+        if (company.branches.length === 1) {
+          const branchId = company.branches[0].id?.toString() || "";
+          setCompanyBranchId(branchId);
+        } 
+        // Se ha più stabilimenti, seleziona quello principale
+        else {
+          const mainBranch = company.branches.find(b => b.is_main);
+          if (mainBranch?.id) {
+            setCompanyBranchId(mainBranch.id.toString());
+          } else {
+            // Nessun branch principale, lascia vuoto
+            setCompanyBranchId("");
+          }
+        }
+      } else {
+        setCompanyBranchId("");
+      }
+    } else {
+      setSelectedCompany(null);
+      setCompanyBranchId("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId, companies]);
 
   const handleSave = async () => {
     if (!title.trim() || !companyId) return;
@@ -71,15 +103,33 @@ export function DeadlineDialog({
     try {
       const selectedCompany = companies.find(c => c.id.toString() === companyId);
       const selectedRiskType = riskTypes.find(r => r.id === riskTypeId);
+      
+      // Calcola next_validation_date se necessario
+      let calculatedNextDate: string | undefined;
+      if (lastValidationDate && nextValidationInterval) {
+        if (nextValidationInterval === 'custom') {
+          calculatedNextDate = nextValidationDate?.toISOString().split('T')[0];
+        } else if (nextValidationInterval !== 'on_request') {
+          // Calcola per intervalli numerici (12, 24, 36, 48)
+          const months = parseInt(nextValidationInterval);
+          if (!isNaN(months)) {
+            const nextDate = new Date(lastValidationDate);
+            nextDate.setMonth(nextDate.getMonth() + months);
+            calculatedNextDate = nextDate.toISOString().split('T')[0];
+          }
+        }
+      }
+      
       const data: CreateDeadlineData = {
         title: title.trim(),
         description: description.trim() || undefined,
         note: note.trim() || undefined,
         company_id: parseInt(companyId),
+        company_branch_id: companyBranchId ? parseInt(companyBranchId) : undefined,
         risk_type_id: riskTypeId || undefined,
-        last_visit_date: lastVisitDate?.toISOString().split('T')[0],
-        next_visit_date: nextVisitInterval === 'custom' ? nextVisitDate?.toISOString().split('T')[0] : undefined,
-        next_visit_interval: nextVisitInterval,
+        last_validation_date: lastValidationDate?.toISOString().split('T')[0],
+        next_validation_date: calculatedNextDate,
+        next_validation_interval: nextValidationInterval,
       };
       await onSave(data, selectedCompany?.name, selectedRiskType?.name);
       onOpenChange(false);
@@ -88,14 +138,14 @@ export function DeadlineDialog({
     }
   };
 
-  const showCustomDatePicker = nextVisitInterval === 'custom';
+  const showCustomDatePicker = nextValidationInterval === 'custom';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {deadline ? "Modifica Scadenza" : "Nuova Scadenza"}
+            Pianifica Valutazione
           </DialogTitle>
         </DialogHeader>
 
@@ -161,7 +211,7 @@ export function DeadlineDialog({
 
           <div className="space-y-2">
             <Label>Tipo di Rischio</Label>
-            <Select value={riskTypeId} onValueChange={setRiskTypeId}>
+            <Select value={riskTypeId || "none"} onValueChange={(value) => setRiskTypeId(value === "none" ? "" : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleziona tipo di rischio">
                   {riskTypeId && (
@@ -173,7 +223,7 @@ export function DeadlineDialog({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">
+                <SelectItem value="none">
                   <span className="text-muted-foreground">Nessuno</span>
                 </SelectItem>
                 {riskTypes.map((riskType) => (
@@ -188,21 +238,52 @@ export function DeadlineDialog({
             </Select>
           </div>
 
+          {selectedCompany && selectedCompany.branches && selectedCompany.branches.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="branch">Stabilimento</Label>
+              <Select value={companyBranchId || "none"} onValueChange={(value) => setCompanyBranchId(value === "none" ? "" : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleziona uno stabilimento (opzionale)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nessuno stabilimento</SelectItem>
+                  {selectedCompany.branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id?.toString() || "none"}>
+                      <div className="flex items-center gap-2">
+                        <span>{branch.name}</span>
+                        {branch.is_main && <span className="text-xs text-muted-foreground">(Principale)</span>}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Data ultima visita</Label>
+              <Label>Data ultima valutazione</Label>
               <DatePicker
-                date={lastVisitDate}
-                onSelect={setLastVisitDate}
+                date={lastValidationDate}
+                onSelect={setLastValidationDate}
                 placeholder="Seleziona data"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Intervallo prossima visita *</Label>
+              <Label>Intervallo prossima valutazione *</Label>
               <Select 
-                value={nextVisitInterval} 
-                onValueChange={(value) => setNextVisitInterval(value as NextVisitInterval)}
+                value={nextValidationInterval} 
+                onValueChange={(value) => {
+                  setNextValidationInterval(value as NextValidationInterval);
+                  // Auto-calculate next validation date if interval is selected
+                  if (value !== 'custom' && value !== 'on_request' && lastValidationDate) {
+                    const months = parseInt(value);
+                    const nextDate = new Date(lastValidationDate);
+                    nextDate.setMonth(nextDate.getMonth() + months);
+                    setNextValidationDate(nextDate);
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -220,10 +301,10 @@ export function DeadlineDialog({
 
           {showCustomDatePicker && (
             <div className="space-y-2">
-              <Label>Data prossima visita</Label>
+              <Label>Data prossima valutazione</Label>
               <DatePicker
-                date={nextVisitDate}
-                onSelect={setNextVisitDate}
+                date={nextValidationDate}
+                onSelect={setNextValidationDate}
                 placeholder="Seleziona data personalizzata"
               />
             </div>
@@ -239,6 +320,7 @@ export function DeadlineDialog({
               rows={2}
             />
           </div>
+
         </div>
 
         <DialogFooter>
@@ -249,7 +331,7 @@ export function DeadlineDialog({
             onClick={handleSave} 
             disabled={!title.trim() || !companyId || isSaving}
           >
-            {isSaving ? "Salvataggio..." : deadline ? "Aggiorna" : "Crea"}
+            {isSaving ? "Salvataggio..." : "Crea"}
           </Button>
         </DialogFooter>
       </DialogContent>

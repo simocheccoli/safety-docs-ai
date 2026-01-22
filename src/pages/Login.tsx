@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { login, initializeUsers } from "@/lib/auth";
+import { login } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
@@ -14,10 +14,6 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  useEffect(() => {
-    initializeUsers();
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

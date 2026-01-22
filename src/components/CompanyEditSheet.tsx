@@ -4,12 +4,14 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { companyApi } from "@/lib/companyApi";
-import { Company, CreateCompanyData } from "@/types/company";
+import { Company, CreateCompanyData, CompanyBranch, mapCompanyToBackend } from "@/types/company";
 import { TagListEditor } from "@/components/company/TagListEditor";
+import { BranchListEditor } from "@/components/company/BranchListEditor";
 
 interface CompanyEditSheetProps {
   open: boolean;
@@ -41,14 +43,15 @@ export function CompanyEditSheet({
     email: '',
     phone: '',
     pec: '',
-    legal_representative: '',
-    rspp: '',
-    doctor: '',
-    consultant: '',
-    mansioni: [],
-    reparti: [],
-    ruoli: [],
-  });
+      legal_representative: '',
+      rspp: '',
+      rls: '',
+      doctor: '',
+      mansioni: [],
+      reparti: [],
+      aree: [],
+      branches: [],
+    });
 
   useEffect(() => {
     if (open) {
@@ -86,23 +89,33 @@ export function CompanyEditSheet({
   const loadFormData = (companyData: Company) => {
     setFormData({
       name: companyData.name,
-      vat_number: companyData.vat_number || '',
-      tax_code: companyData.tax_code || '',
+      // Use camelCase from API with fallback to legacy snake_case
+      vat: companyData.vat || companyData.vat_number || '',
+      vat_number: companyData.vat || companyData.vat_number || '',
+      fiscalCode: companyData.fiscalCode || companyData.tax_code || '',
+      tax_code: companyData.fiscalCode || companyData.tax_code || '',
       address: companyData.address || '',
-      zip: companyData.zip || '',
+      // Use 'cap' from API with fallback to 'zip'
+      cap: companyData.cap || companyData.zip || '',
+      zip: companyData.cap || companyData.zip || '',
       city: companyData.city || '',
       province: companyData.province || '',
       country: companyData.country || '',
       email: companyData.email || '',
       phone: companyData.phone || '',
       pec: companyData.pec || '',
-      legal_representative: companyData.legal_representative || '',
+      // Use camelCase from API with fallback to legacy snake_case
+      legalRepresentative: companyData.legalRepresentative || companyData.legal_representative || '',
+      legal_representative: companyData.legalRepresentative || companyData.legal_representative || '',
       rspp: companyData.rspp || '',
-      doctor: companyData.doctor || '',
-      consultant: companyData.consultant || '',
+      rls: companyData.rls || '',
+      // Use 'medico' from API with fallback to 'doctor'
+      medico: companyData.medico || companyData.doctor || '',
+      doctor: companyData.medico || companyData.doctor || '',
       mansioni: companyData.mansioni || [],
       reparti: companyData.reparti || [],
-      ruoli: companyData.ruoli || [],
+      aree: companyData.aree || [],
+      branches: companyData.branches || [],
     });
   };
 
@@ -122,15 +135,16 @@ export function CompanyEditSheet({
       pec: '',
       legal_representative: '',
       rspp: '',
+      rls: '',
       doctor: '',
-      consultant: '',
       mansioni: [],
       reparti: [],
-      ruoli: [],
+      aree: [],
+      branches: [],
     });
   };
 
-  const handleChange = (field: keyof CreateCompanyData, value: string | string[]) => {
+  const handleChange = (field: keyof CreateCompanyData, value: string | string[] | CompanyBranch[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -148,14 +162,15 @@ export function CompanyEditSheet({
 
     try {
       setSaving(true);
+      const mappedData = mapCompanyToBackend(formData);
       if (company) {
-        await companyApi.update(company.id, formData);
+        await companyApi.update(company.id, mappedData);
         toast({
           title: "Successo",
           description: "Azienda aggiornata con successo",
         });
       } else {
-        await companyApi.create(formData);
+        await companyApi.create(mappedData);
         toast({
           title: "Successo",
           description: "Azienda creata con successo",
@@ -176,7 +191,7 @@ export function CompanyEditSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl">
+      <SheetContent side="right" className="w-full sm:max-w-5xl">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
@@ -196,268 +211,323 @@ export function CompanyEditSheet({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col h-[calc(100vh-8rem)]">
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-6 py-6">
-                {/* Informazioni Generali */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    Informazioni Generali
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Nome Azienda *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => handleChange('name', e.target.value)}
-                        placeholder="Es. Acme S.r.l."
-                        required
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="vat_number">Partita IVA</Label>
-                        <Input
-                          id="vat_number"
-                          value={formData.vat_number}
-                          onChange={(e) => handleChange('vat_number', e.target.value)}
-                          placeholder="IT12345678901"
-                          maxLength={20}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="tax_code">Codice Fiscale</Label>
-                        <Input
-                          id="tax_code"
-                          value={formData.tax_code}
-                          onChange={(e) => handleChange('tax_code', e.target.value)}
-                          placeholder="12345678901"
-                          maxLength={20}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <ScrollArea className="flex-1 pr-2">
+              <Tabs defaultValue="informazioni" className="w-full py-2">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="informazioni">Informazioni Azienda</TabsTrigger>
+                  <TabsTrigger value="organizzazione">Organizzazione</TabsTrigger>
+                </TabsList>
 
-                <Separator />
-
-                {/* Indirizzo */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Indirizzo
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Via/Piazza</Label>
-                      <Input
-                        id="address"
-                        value={formData.address}
-                        onChange={(e) => handleChange('address', e.target.value)}
-                        placeholder="Via Roma, 1"
-                        maxLength={255}
-                      />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="zip">CAP</Label>
+                {/* Tab 1 - Informazioni Azienda */}
+                <TabsContent value="informazioni" className="space-y-2 mt-3">
+                  {/* Card Informazioni Generali */}
+                  <Card className="shadow-none">
+                    <CardHeader className="p-3 pb-2">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                        <Building2 className="h-3.5 w-3.5" />
+                        Informazioni Generali
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3 pt-0 space-y-1.5">
+                      <div className="space-y-1">
+                        <Label htmlFor="name" className="text-sm">Nome Azienda *</Label>
                         <Input
-                          id="zip"
-                          value={formData.zip}
-                          onChange={(e) => handleChange('zip', e.target.value)}
-                          placeholder="00100"
-                          maxLength={10}
+                          id="name"
+                          value={formData.name}
+                          onChange={(e) => handleChange('name', e.target.value)}
+                          placeholder="Es. Acme S.r.l."
+                          required
+                          className="h-8 text-sm"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="city">Città</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="vat_number" className="text-sm">Partita IVA</Label>
+                          <Input
+                            id="vat_number"
+                            value={formData.vat_number}
+                            onChange={(e) => handleChange('vat_number', e.target.value)}
+                            placeholder="IT12345678901"
+                            maxLength={20}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="tax_code" className="text-sm">Codice Fiscale</Label>
+                          <Input
+                            id="tax_code"
+                            value={formData.tax_code}
+                            onChange={(e) => handleChange('tax_code', e.target.value)}
+                            placeholder="12345678901"
+                            maxLength={20}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Card Indirizzo */}
+                  <Card className="shadow-none">
+                    <CardHeader className="p-3 pb-2">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5" />
+                        Indirizzo
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3 pt-0 space-y-1.5">
+                      <div className="space-y-1">
+                        <Label htmlFor="address" className="text-sm">Via/Piazza</Label>
                         <Input
-                          id="city"
-                          value={formData.city}
-                          onChange={(e) => handleChange('city', e.target.value)}
-                          placeholder="Roma"
+                          id="address"
+                          value={formData.address}
+                          onChange={(e) => handleChange('address', e.target.value)}
+                          placeholder="Via Roma, 1"
+                          maxLength={255}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="zip" className="text-sm">CAP</Label>
+                          <Input
+                            id="zip"
+                            value={formData.zip}
+                            onChange={(e) => handleChange('zip', e.target.value)}
+                            placeholder="00100"
+                            maxLength={10}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="city" className="text-sm">Città</Label>
+                          <Input
+                            id="city"
+                            value={formData.city}
+                            onChange={(e) => handleChange('city', e.target.value)}
+                            placeholder="Roma"
+                            maxLength={100}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="province" className="text-sm">Provincia</Label>
+                          <Input
+                            id="province"
+                            value={formData.province}
+                            onChange={(e) => handleChange('province', e.target.value)}
+                            placeholder="RM"
+                            maxLength={5}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="country" className="text-sm">Paese</Label>
+                        <Input
+                          id="country"
+                          value={formData.country}
+                          onChange={(e) => handleChange('country', e.target.value)}
+                          placeholder="Italia"
                           maxLength={100}
+                          className="h-8 text-sm"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="province">Provincia</Label>
+                    </CardContent>
+                  </Card>
+
+                  {/* Card Stabilimenti */}
+                  <Card className="shadow-none">
+                    <CardHeader className="p-3 pb-2">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                        <Building2 className="h-3.5 w-3.5" />
+                        Stabilimenti
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3 pt-0">
+                      <Label className="text-sm text-muted-foreground">
+                        Gestisci gli stabilimenti dell'azienda. Puoi impostare uno stabilimento principale che verrà selezionato automaticamente.
+                      </Label>
+                      <div className="mt-2">
+                        <BranchListEditor
+                          values={formData.branches || []}
+                          onChange={(values) => handleChange('branches', values)}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Card Contatti */}
+                  <Card className="shadow-none">
+                    <CardHeader className="p-3 pb-2">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5" />
+                        Contatti
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3 pt-0 space-y-1.5">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="email" className="text-sm">Email</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => handleChange('email', e.target.value)}
+                            placeholder="info@example.com"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="phone" className="text-sm">Telefono</Label>
+                          <Input
+                            id="phone"
+                            value={formData.phone}
+                            onChange={(e) => handleChange('phone', e.target.value)}
+                            placeholder="+39 06 1234567"
+                            maxLength={30}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="pec" className="text-sm">PEC</Label>
                         <Input
-                          id="province"
-                          value={formData.province}
-                          onChange={(e) => handleChange('province', e.target.value)}
-                          placeholder="RM"
-                          maxLength={5}
+                          id="pec"
+                          type="email"
+                          value={formData.pec}
+                          onChange={(e) => handleChange('pec', e.target.value)}
+                          placeholder="pec@example.it"
+                          className="h-8 text-sm"
                         />
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="country">Paese</Label>
-                      <Input
-                        id="country"
-                        value={formData.country}
-                        onChange={(e) => handleChange('country', e.target.value)}
-                        placeholder="Italia"
-                        maxLength={100}
-                      />
-                    </div>
-                  </div>
-                </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-                <Separator />
+                {/* Tab 2 - Organizzazione */}
+                <TabsContent value="organizzazione" className="space-y-2 mt-3">
+                  {/* Card Responsabili */}
+                  <Card className="shadow-none">
+                    <CardHeader className="p-3 pb-2">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                        <Users className="h-3.5 w-3.5" />
+                        Responsabili
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3 pt-0 space-y-1.5">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="legal_representative" className="text-sm flex items-center gap-2">
+                            <User className="h-3 w-3" />
+                            Rappresentante Legale
+                          </Label>
+                          <Input
+                            id="legal_representative"
+                            value={formData.legal_representative}
+                            onChange={(e) => handleChange('legal_representative', e.target.value)}
+                            placeholder="Mario Rossi"
+                            maxLength={255}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="rspp" className="text-sm flex items-center gap-2">
+                            <FileText className="h-3 w-3" />
+                            RSPP
+                          </Label>
+                          <Input
+                            id="rspp"
+                            value={formData.rspp}
+                            onChange={(e) => handleChange('rspp', e.target.value)}
+                            placeholder="Luigi Bianchi"
+                            maxLength={255}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="rls" className="text-sm flex items-center gap-2">
+                            <Users className="h-3 w-3" />
+                            RLS
+                          </Label>
+                          <Input
+                            id="rls"
+                            value={formData.rls}
+                            onChange={(e) => handleChange('rls', e.target.value)}
+                            placeholder="Anna Neri"
+                            maxLength={255}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="doctor" className="text-sm flex items-center gap-2">
+                            <Stethoscope className="h-3 w-3" />
+                            Medico Competente
+                          </Label>
+                          <Input
+                            id="doctor"
+                            value={formData.doctor}
+                            onChange={(e) => handleChange('doctor', e.target.value)}
+                            placeholder="Dott. Giovanni Verdi"
+                            maxLength={255}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                {/* Contatti */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    Contatti
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => handleChange('email', e.target.value)}
-                        placeholder="info@example.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Telefono</Label>
-                      <Input
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) => handleChange('phone', e.target.value)}
-                        placeholder="+39 06 1234567"
-                        maxLength={30}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pec">PEC</Label>
-                      <Input
-                        id="pec"
-                        type="email"
-                        value={formData.pec}
-                        onChange={(e) => handleChange('pec', e.target.value)}
-                        placeholder="pec@example.it"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Responsabili */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Responsabili
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="legal_representative" className="flex items-center gap-2">
-                        <User className="h-3 w-3" />
-                        Rappresentante Legale
-                      </Label>
-                      <Input
-                        id="legal_representative"
-                        value={formData.legal_representative}
-                        onChange={(e) => handleChange('legal_representative', e.target.value)}
-                        placeholder="Mario Rossi"
-                        maxLength={255}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="rspp" className="flex items-center gap-2">
-                        <FileText className="h-3 w-3" />
-                        RSPP (Responsabile Servizio Prevenzione e Protezione)
-                      </Label>
-                      <Input
-                        id="rspp"
-                        value={formData.rspp}
-                        onChange={(e) => handleChange('rspp', e.target.value)}
-                        placeholder="Luigi Bianchi"
-                        maxLength={255}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="doctor" className="flex items-center gap-2">
-                        <Stethoscope className="h-3 w-3" />
-                        Medico Competente
-                      </Label>
-                      <Input
-                        id="doctor"
-                        value={formData.doctor}
-                        onChange={(e) => handleChange('doctor', e.target.value)}
-                        placeholder="Dott. Giovanni Verdi"
-                        maxLength={255}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="consultant" className="flex items-center gap-2">
-                        <Users className="h-3 w-3" />
-                        Consulente
-                      </Label>
-                      <Input
-                        id="consultant"
-                        value={formData.consultant}
-                        onChange={(e) => handleChange('consultant', e.target.value)}
-                        placeholder="Studio Associato XYZ"
-                        maxLength={255}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Mansioni, Reparti, Ruoli */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <Briefcase className="h-4 w-4" />
-                    Classificazione Personale
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Briefcase className="h-3 w-3" />
-                        Mansioni
-                      </Label>
-                      <TagListEditor
-                        values={formData.mansioni || []}
-                        onChange={(values) => handleChange('mansioni', values)}
-                        placeholder="Aggiungi mansione..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <LayoutGrid className="h-3 w-3" />
-                        Reparti
-                      </Label>
-                      <TagListEditor
-                        values={formData.reparti || []}
-                        onChange={(values) => handleChange('reparti', values)}
-                        placeholder="Aggiungi reparto..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <UserCog className="h-3 w-3" />
-                        Ruoli
-                      </Label>
-                      <TagListEditor
-                        values={formData.ruoli || []}
-                        onChange={(values) => handleChange('ruoli', values)}
-                        placeholder="Aggiungi ruolo..."
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+                  {/* Card Classificazione */}
+                  <Card className="shadow-none">
+                    <CardHeader className="p-3 pb-2">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                        <Briefcase className="h-3.5 w-3.5" />
+                        Classificazione Personale
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3 pt-0 space-y-1.5">
+                      <div className="space-y-1">
+                        <Label className="text-sm flex items-center gap-2">
+                          <Briefcase className="h-3 w-3" />
+                          Mansioni
+                        </Label>
+                        <TagListEditor
+                          values={formData.mansioni || []}
+                          onChange={(values) => handleChange('mansioni', values)}
+                          placeholder="Aggiungi mansione..."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-sm flex items-center gap-2">
+                          <UserCog className="h-3 w-3" />
+                          Aree
+                        </Label>
+                        <TagListEditor
+                          values={formData.aree || []}
+                          onChange={(values) => handleChange('aree', values)}
+                          placeholder="Aggiungi area..."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-sm flex items-center gap-2">
+                          <LayoutGrid className="h-3 w-3" />
+                          Reparti
+                        </Label>
+                        <TagListEditor
+                          values={formData.reparti || []}
+                          onChange={(values) => handleChange('reparti', values)}
+                          placeholder="Aggiungi reparto..."
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </ScrollArea>
 
-            <div className="flex gap-3 pt-4 border-t">
+            <div className="flex gap-3 pt-4 border-t bg-background sticky bottom-0 z-10">
               <Button
                 type="button"
                 variant="outline"

@@ -43,7 +43,7 @@ export interface ElaborationUpload {
   elaboration_id?: number; // Legacy alias
   mansione: string;
   reparto: string;
-  ruolo: string;
+  area: string;
   files: ElaborationFile[];
   createdAt?: string; // OpenAPI uses camelCase
   created_at?: string; // Legacy alias
@@ -75,7 +75,7 @@ export interface CreateElaborationRequest {
 export interface CreateUploadRequest {
   mansione: string;
   reparto: string;
-  ruolo: string;
+  area: string;
   files?: File[];
 }
 
@@ -126,7 +126,7 @@ export const mapUploadFromBackend = (data: any): ElaborationUpload => ({
   elaboration_id: data.elaborationId || data.elaboration_id,
   mansione: data.mansione,
   reparto: data.reparto,
-  ruolo: data.ruolo,
+  area: data.area,
   files: (data.files || []).map(mapFileFromBackend),
   createdAt: data.createdAt || data.created_at,
   created_at: data.createdAt || data.created_at,

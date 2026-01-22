@@ -10,7 +10,7 @@ import { companyApi } from "@/lib/companyApi";
 import { Company } from "@/types/company";
 
 interface FileUploadStepProps {
-  onFilesSelected: (files: File[], dvrName: string, companyId?: number) => void;
+  onFilesSelected: (files: File[], dvrName: string, companyId?: number, companyBranchId?: number) => void;
   existingDvrId?: string;
 }
 
@@ -18,11 +18,34 @@ export function FileUploadStep({ onFilesSelected, existingDvrId }: FileUploadSte
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [dvrName, setDvrName] = useState<string>(`DVR ${new Date().toLocaleDateString('it-IT')}`);
   const [companyId, setCompanyId] = useState<number | undefined>();
+  const [companyBranchId, setCompanyBranchId] = useState<number | undefined>();
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 
   useEffect(() => {
     companyApi.getAll().then(setCompanies).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (companyId) {
+      const company = companies.find(c => c.id === companyId);
+      setSelectedCompany(company || null);
+      // Auto-select main branch if available
+      if (company?.branches && company.branches.length > 0) {
+        const mainBranch = company.branches.find(b => b.is_main);
+        if (mainBranch && mainBranch.id) {
+          setCompanyBranchId(mainBranch.id);
+        } else {
+          setCompanyBranchId(undefined);
+        }
+      } else {
+        setCompanyBranchId(undefined);
+      }
+    } else {
+      setSelectedCompany(null);
+      setCompanyBranchId(undefined);
+    }
+  }, [companyId, companies]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -37,7 +60,7 @@ export function FileUploadStep({ onFilesSelected, existingDvrId }: FileUploadSte
 
   const handleContinue = () => {
     if (selectedFiles.length > 0 && dvrName.trim()) {
-      onFilesSelected(selectedFiles, dvrName, companyId);
+      onFilesSelected(selectedFiles, dvrName, companyId, companyBranchId);
     }
   };
 
@@ -102,6 +125,31 @@ export function FileUploadStep({ onFilesSelected, existingDvrId }: FileUploadSte
                 </SelectContent>
               </Select>
             </div>
+
+            {selectedCompany && selectedCompany.branches && selectedCompany.branches.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="branch">Stabilimento</Label>
+                <Select 
+                  value={companyBranchId?.toString() || "none"} 
+                  onValueChange={(value) => setCompanyBranchId(value === "none" ? undefined : parseInt(value))}
+                >
+                  <SelectTrigger id="branch">
+                    <SelectValue placeholder="Seleziona uno stabilimento (opzionale)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nessuno stabilimento</SelectItem>
+                    {selectedCompany.branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id?.toString() || ""}>
+                        <div className="flex items-center gap-2">
+                          <span>{branch.name}</span>
+                          {branch.is_main && <span className="text-xs text-muted-foreground">(Principale)</span>}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         )}
 

@@ -16,6 +16,274 @@ tags:
   -
     name: Rischi
     description: ''
+  -
+    name: Companies
+    description: Gestione delle aziende
+  -
+    name: Deadlines
+    description: Gestione delle scadenze e validazioni
+  -
+    name: Elaborations
+    description: Gestione delle elaborazioni e caricamenti
+components:
+  schemas:
+    Company:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Bio5 S.r.l."
+        address:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        province:
+          type: string
+          nullable: true
+        cap:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        pec:
+          type: string
+          nullable: true
+        vat:
+          type: string
+          nullable: true
+        fiscalCode:
+          type: string
+          nullable: true
+        legalRepresentative:
+          type: string
+          nullable: true
+        rspp:
+          type: string
+          nullable: true
+        rls:
+          type: string
+          nullable: true
+        medico:
+          type: string
+          nullable: true
+        mansioni:
+          type: array
+          items:
+            type: string
+          nullable: true
+        reparti:
+          type: array
+          items:
+            type: string
+          nullable: true
+        aree:
+          type: array
+          items:
+            type: string
+          nullable: true
+        branches:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompanyBranch'
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+    CompanyBranch:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Stabilimento Nord"
+        address:
+          type: string
+          nullable: true
+        is_main:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+    Deadline:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: "Revisione DVR annuale"
+        description:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        company_id:
+          type: integer
+          example: 1
+        company_branch_id:
+          type: integer
+          nullable: true
+        risk_type_id:
+          type: string
+          nullable: true
+        risk_type_name:
+          type: string
+          nullable: true
+        last_validation_date:
+          type: string
+          format: date
+          nullable: true
+        next_validation_date:
+          type: string
+          format: date
+          nullable: true
+        next_validation_interval:
+          type: string
+          enum: ['12', '24', '36', '48', 'custom', 'on_request']
+          example: '12'
+        status:
+          type: string
+          enum: ['pending', 'completed', 'overdue']
+          example: 'pending'
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    CreateDeadlineRequest:
+      type: object
+      required:
+        - title
+        - company_id
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        company_id:
+          type: integer
+        company_branch_id:
+          type: integer
+          nullable: true
+        risk_type_id:
+          type: string
+          nullable: true
+        last_validation_date:
+          type: string
+          format: date
+          nullable: true
+        next_validation_date:
+          type: string
+          format: date
+          nullable: true
+        next_validation_interval:
+          type: string
+          enum: ['12', '24', '36', '48', 'custom', 'on_request']
+          nullable: true
+    UpdateDeadlineRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        company_id:
+          type: integer
+        company_branch_id:
+          type: integer
+          nullable: true
+        risk_type_id:
+          type: string
+          nullable: true
+        last_validation_date:
+          type: string
+          format: date
+          nullable: true
+        next_validation_date:
+          type: string
+          format: date
+          nullable: true
+        next_validation_interval:
+          type: string
+          enum: ['12', '24', '36', '48', 'custom', 'on_request']
+          nullable: true
+    ElaborationUpload:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        elaborationId:
+          type: integer
+          example: 1
+        mansione:
+          type: string
+          nullable: true
+        reparto:
+          type: string
+          nullable: true
+        area:
+          type: string
+          nullable: true
+        files:
+          type: array
+          items:
+            type: object
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+    CreateElaborationUploadRequest:
+      type: object
+      properties:
+        mansione:
+          type: string
+          nullable: true
+        reparto:
+          type: string
+          nullable: true
+        area:
+          type: string
+          nullable: true
+        company_branch_id:
+          type: integer
+          nullable: true
 paths:
   /api/webhook-endpoint:
     post:
@@ -1126,3 +1394,494 @@ paths:
         required: true
         schema:
           type: integer
+  /api/v1/companies:
+    get:
+      summary: Lista tutte le aziende
+      operationId: listCompanies
+      tags:
+        - Companies
+      responses:
+        200:
+          description: Lista aziende
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Company'
+      security: []
+    post:
+      summary: Crea una nuova azienda
+      operationId: createCompany
+      tags:
+        - Companies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                address:
+                  type: string
+                  nullable: true
+                city:
+                  type: string
+                  nullable: true
+                province:
+                  type: string
+                  nullable: true
+                cap:
+                  type: string
+                  nullable: true
+                phone:
+                  type: string
+                  nullable: true
+                email:
+                  type: string
+                  nullable: true
+                pec:
+                  type: string
+                  nullable: true
+                vat:
+                  type: string
+                  nullable: true
+                fiscalCode:
+                  type: string
+                  nullable: true
+                legalRepresentative:
+                  type: string
+                  nullable: true
+                rspp:
+                  type: string
+                  nullable: true
+                rls:
+                  type: string
+                  nullable: true
+                medico:
+                  type: string
+                  nullable: true
+                mansioni:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+                reparti:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+                aree:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+                branches:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      address:
+                        type: string
+                        nullable: true
+                      is_main:
+                        type: boolean
+                        nullable: true
+                  nullable: true
+      responses:
+        201:
+          description: Azienda creata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        422:
+          description: Dati non validi
+      security: []
+  '/api/v1/companies/{companyId}':
+    get:
+      summary: Ottieni dettagli azienda
+      operationId: getCompany
+      tags:
+        - Companies
+      parameters:
+        - in: path
+          name: companyId
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Dettagli azienda
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        404:
+          description: Azienda non trovata
+      security: []
+    patch:
+      summary: Aggiorna azienda
+      operationId: updateCompany
+      tags:
+        - Companies
+      parameters:
+        - in: path
+          name: companyId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                address:
+                  type: string
+                  nullable: true
+                city:
+                  type: string
+                  nullable: true
+                province:
+                  type: string
+                  nullable: true
+                cap:
+                  type: string
+                  nullable: true
+                phone:
+                  type: string
+                  nullable: true
+                email:
+                  type: string
+                  nullable: true
+                pec:
+                  type: string
+                  nullable: true
+                vat:
+                  type: string
+                  nullable: true
+                fiscalCode:
+                  type: string
+                  nullable: true
+                legalRepresentative:
+                  type: string
+                  nullable: true
+                rspp:
+                  type: string
+                  nullable: true
+                rls:
+                  type: string
+                  nullable: true
+                medico:
+                  type: string
+                  nullable: true
+                mansioni:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+                reparti:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+                aree:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+                branches:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        nullable: true
+                      name:
+                        type: string
+                      address:
+                        type: string
+                        nullable: true
+                      is_main:
+                        type: boolean
+                        nullable: true
+                  nullable: true
+      responses:
+        200:
+          description: Azienda aggiornata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        404:
+          description: Azienda non trovata
+        422:
+          description: Dati non validi
+      security: []
+    delete:
+      summary: Elimina azienda
+      operationId: deleteCompany
+      tags:
+        - Companies
+      parameters:
+        - in: path
+          name: companyId
+          required: true
+          schema:
+            type: integer
+      responses:
+        204:
+          description: Azienda eliminata
+        404:
+          description: Azienda non trovata
+      security: []
+  /api/v1/deadlines:
+    get:
+      summary: Lista tutte le scadenze
+      operationId: listDeadlines
+      tags:
+        - Deadlines
+      parameters:
+        - in: query
+          name: company_id
+          schema:
+            type: integer
+          nullable: true
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: ['pending', 'completed', 'overdue']
+          nullable: true
+        - in: query
+          name: last_validation_date
+          schema:
+            type: string
+            format: date
+          nullable: true
+        - in: query
+          name: next_validation_date
+          schema:
+            type: string
+            format: date
+          nullable: true
+      responses:
+        200:
+          description: Lista scadenze
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Deadline'
+      security: []
+    post:
+      summary: Crea una nuova scadenza
+      operationId: createDeadline
+      tags:
+        - Deadlines
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeadlineRequest'
+      responses:
+        201:
+          description: Scadenza creata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deadline'
+        422:
+          description: Dati non validi
+      security: []
+  '/api/v1/deadlines/{id}':
+    get:
+      summary: Ottieni dettagli scadenza
+      operationId: getDeadline
+      tags:
+        - Deadlines
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Dettagli scadenza
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deadline'
+        404:
+          description: Scadenza non trovata
+      security: []
+    put:
+      summary: Aggiorna scadenza
+      operationId: updateDeadline
+      tags:
+        - Deadlines
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeadlineRequest'
+      responses:
+        200:
+          description: Scadenza aggiornata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deadline'
+        404:
+          description: Scadenza non trovata
+        422:
+          description: Dati non validi
+      security: []
+    delete:
+      summary: Elimina scadenza
+      operationId: deleteDeadline
+      tags:
+        - Deadlines
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        204:
+          description: Scadenza eliminata
+        404:
+          description: Scadenza non trovata
+      security: []
+  '/api/v1/deadlines/{id}/complete':
+    post:
+      summary: Segna scadenza come completata
+      operationId: completeDeadline
+      tags:
+        - Deadlines
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Scadenza completata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deadline'
+        404:
+          description: Scadenza non trovata
+      security: []
+  /api/v1/elaborations:
+    post:
+      summary: Crea una nuova elaborazione
+      operationId: createElaboration
+      tags:
+        - Elaborations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                companyId:
+                  type: integer
+                  nullable: true
+                companyBranchId:
+                  type: integer
+                  nullable: true
+      responses:
+        201:
+          description: Elaborazione creata
+          content:
+            application/json:
+              schema:
+                type: object
+        422:
+          description: Dati non validi
+      security: []
+  '/api/v1/elaborations/{elaborationId}/uploads':
+    post:
+      summary: Carica file per elaborazione
+      operationId: createElaborationUpload
+      tags:
+        - Elaborations
+      parameters:
+        - in: path
+          name: elaborationId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                mansione:
+                  type: string
+                  nullable: true
+                reparto:
+                  type: string
+                  nullable: true
+                area:
+                  type: string
+                  nullable: true
+                company_branch_id:
+                  type: integer
+                  nullable: true
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        201:
+          description: Caricamento creato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ElaborationUpload'
+        422:
+          description: Dati non validi
+      security: []

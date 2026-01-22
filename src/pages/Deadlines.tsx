@@ -4,30 +4,48 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { it } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CardSkeleton } from "@/components/ui/loading-skeletons";
 import { DeadlineCard } from "@/components/deadline/DeadlineCard";
 import { DeadlineDialog } from "@/components/deadline/DeadlineDialog";
+import { DeadlineEditSheet } from "@/components/deadline/DeadlineEditSheet";
 import { QuickCompanyDialog } from "@/components/deadline/QuickCompanyDialog";
+import { CompleteValidationDialog } from "@/components/deadline/CompleteValidationDialog";
+import { CompleteDeadlineData } from "@/types/deadlineValidation";
 import { deadlineApi } from "@/lib/deadlineApi";
 import { companyApi } from "@/lib/companyApi";
 import { getRiskTypes } from "@/lib/riskApi";
 import { Deadline, CreateDeadlineData } from "@/types/deadline";
 import { CreateCompanyData } from "@/types/company";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Search, Calendar, List, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
+import { useListPagination } from "@/hooks/useListPagination";
+import { exportToCSV, exportToExcel } from "@/utils/exportUtils";
+import { Plus, Search, Calendar, List, ChevronLeft, ChevronRight, AlertTriangle, Download, ChevronDown, Pencil, Trash2, CheckCircle2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function Deadlines() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<"list" | "calendar">("list");
+  const [viewMode, setViewMode] = useState<"card" | "table">("table");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "overdue">("all");
-  const [filterCompany, setFilterCompany] = useState<string>("all");
+  const [filterCompanies, setFilterCompanies] = useState<Set<number>>(new Set());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [quickCompanyDialogOpen, setQuickCompanyDialogOpen] = useState(false);
   const [editingDeadline, setEditingDeadline] = useState<Deadline | undefined>();
+  const [editingDeadlineSheetOpen, setEditingDeadlineSheetOpen] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [completingDeadline, setCompletingDeadline] = useState<Deadline | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deadlineToDelete, setDeadlineToDelete] = useState<number | null>(null);
 
   const { data: deadlines = [], isLoading: deadlinesLoading } = useQuery({
     queryKey: ['deadlines'],
@@ -39,10 +57,15 @@ export default function Deadlines() {
     queryFn: companyApi.getAll,
   });
 
-  const { data: riskTypes = [], isLoading: riskTypesLoading } = useQuery({
+  const { data: allRiskTypes = [], isLoading: riskTypesLoading } = useQuery({
     queryKey: ['risks'],
     queryFn: getRiskTypes,
   });
+
+  // Filtra solo i tipi di rischio attivi
+  const riskTypes = useMemo(() => {
+    return allRiskTypes.filter(rt => rt.status === 'active');
+  }, [allRiskTypes]);
 
   const createMutation = useMutation({
     mutationFn: ({ data, companyName, riskTypeName }: { data: CreateDeadlineData; companyName?: string; riskTypeName?: string }) => 
@@ -80,15 +103,27 @@ export default function Deadlines() {
   });
 
   const completeMutation = useMutation({
-    mutationFn: deadlineApi.markCompleted,
+    mutationFn: ({ id, data }: { id: number; data?: CompleteDeadlineData }) => deadlineApi.markCompleted(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deadlines'] });
-      toast({ title: "Visita completata! Prossima scadenza aggiornata." });
+      toast({ title: "Valutazione completata! Prossima scadenza aggiornata." });
+      setCompleteDialogOpen(false);
+      setCompletingDeadline(undefined);
     },
     onError: () => {
       toast({ title: "Errore nel completamento", variant: "destructive" });
     }
   });
+
+  const handleCompleteClick = (deadline: Deadline) => {
+    setCompletingDeadline(deadline);
+    setCompleteDialogOpen(true);
+  };
+
+  const handleCompleteValidation = async (data: CompleteDeadlineData) => {
+    if (!completingDeadline) return;
+    await completeMutation.mutateAsync({ id: completingDeadline.id, data });
+  };
 
   const createCompanyMutation = useMutation({
     mutationFn: companyApi.create,
@@ -108,25 +143,56 @@ export default function Deadlines() {
         d.description?.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesStatus = filterStatus === 'all' || d.status === filterStatus;
-      const matchesCompany = filterCompany === 'all' || d.company_id.toString() === filterCompany;
+      const matchesCompany = filterCompanies.size === 0 || filterCompanies.has(d.company_id);
       
       return matchesSearch && matchesStatus && matchesCompany;
     });
-  }, [deadlines, searchQuery, filterStatus, filterCompany]);
+  }, [deadlines, searchQuery, filterStatus, filterCompanies]);
+
+  // Usa hook per paginazione e selezione (solo per vista lista)
+  const {
+    currentPage,
+    setCurrentPage,
+    perPage,
+    setPerPage,
+    totalPages,
+    paginatedItems: paginatedDeadlines,
+    startIndex,
+    selectedIds,
+    toggleSelection,
+    toggleSelectAll,
+    clearSelection,
+    isAllSelected,
+    hasSelection,
+    getSelectedItems,
+  } = useListPagination(filteredDeadlines, 10);
 
   const overdueCount = deadlines.filter(d => d.status === 'overdue').length;
 
-  const handleSave = async (data: CreateDeadlineData, companyName?: string, riskTypeName?: string) => {
-    if (editingDeadline) {
-      await updateMutation.mutateAsync({ id: editingDeadline.id, data, companyName, riskTypeName });
-    } else {
-      await createMutation.mutateAsync({ data, companyName, riskTypeName });
-    }
+  const handleCreate = async (data: CreateDeadlineData, companyName?: string, riskTypeName?: string) => {
+    await createMutation.mutateAsync({ data, companyName, riskTypeName });
+  };
+
+  const handleUpdate = async (id: number, data: CreateDeadlineData, companyName?: string, riskTypeName?: string) => {
+    await updateMutation.mutateAsync({ id, data, companyName, riskTypeName });
   };
 
   const handleEdit = (deadline: Deadline) => {
     setEditingDeadline(deadline);
-    setDialogOpen(true);
+    setEditingDeadlineSheetOpen(true);
+  };
+
+  const handleDeleteClick = (id: number) => {
+    setDeadlineToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deadlineToDelete !== null) {
+      deleteMutation.mutate(deadlineToDelete);
+      setDeleteDialogOpen(false);
+      setDeadlineToDelete(null);
+    }
   };
 
   const handleCreateCompany = async (data: CreateCompanyData) => {
@@ -138,6 +204,138 @@ export default function Deadlines() {
     setDialogOpen(true);
   };
 
+  // Funzioni export
+  const formatDeadlineDate = (dateString?: string) => {
+    if (!dateString) return '';
+    return format(new Date(dateString), 'dd/MM/yyyy', { locale: it });
+  };
+
+  const handleExportCSV = () => {
+    exportToCSV(
+      paginatedDeadlines,
+      ['Titolo', 'Azienda', 'Tipo Rischio', 'Data Ultima Validazione', 'Data Prossima Validazione', 'Stato'],
+      (deadline) => [
+        deadline.title || '',
+        deadline.company_name || '',
+        deadline.risk_type_name || '',
+        formatDeadlineDate(deadline.last_validation_date),
+        formatDeadlineDate(deadline.next_validation_date),
+        deadline.status || '',
+      ],
+      'scadenze'
+    );
+    toast({ title: 'Successo', description: 'File CSV esportato con successo' });
+  };
+
+  const handleExportExcel = async () => {
+    await exportToExcel(
+      paginatedDeadlines,
+      ['Titolo', 'Azienda', 'Tipo Rischio', 'Data Ultima Validazione', 'Data Prossima Validazione', 'Stato'],
+      (deadline) => [
+        deadline.title || '',
+        deadline.company_name || '',
+        deadline.risk_type_name || '',
+        formatDeadlineDate(deadline.last_validation_date),
+        formatDeadlineDate(deadline.next_validation_date),
+        deadline.status || '',
+      ],
+      'scadenze'
+    );
+    toast({ title: 'Successo', description: 'File Excel esportato con successo' });
+  };
+
+  const handleExportSelected = async () => {
+    const selected = getSelectedItems();
+    if (selected.length === 0) return;
+
+    await exportToExcel(
+      selected,
+      ['Titolo', 'Azienda', 'Tipo Rischio', 'Data Ultima Validazione', 'Data Prossima Validazione', 'Stato'],
+      (deadline) => [
+        deadline.title || '',
+        deadline.company_name || '',
+        deadline.risk_type_name || '',
+        formatDeadlineDate(deadline.last_validation_date),
+        formatDeadlineDate(deadline.next_validation_date),
+        deadline.status || '',
+      ],
+      `scadenze_selezionate_${selected.length}`
+    );
+    toast({ title: 'Successo', description: `${selected.length} elementi esportati con successo` });
+  };
+
+  const renderPaginationItems = () => {
+    const items = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink
+              onClick={() => setCurrentPage(i)}
+              isActive={currentPage === i}
+              className="cursor-pointer"
+            >
+              {i}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+    } else {
+      items.push(
+        <PaginationItem key={1}>
+          <PaginationLink
+            onClick={() => setCurrentPage(1)}
+            isActive={currentPage === 1}
+            className="cursor-pointer"
+          >
+            1
+          </PaginationLink>
+        </PaginationItem>
+      );
+
+      if (currentPage > 3) {
+        items.push(<PaginationEllipsis key="ellipsis-1" />);
+      }
+
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+
+      for (let i = start; i <= end; i++) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink
+              onClick={() => setCurrentPage(i)}
+              isActive={currentPage === i}
+              className="cursor-pointer"
+            >
+              {i}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+
+      if (currentPage < totalPages - 2) {
+        items.push(<PaginationEllipsis key="ellipsis-2" />);
+      }
+
+      items.push(
+        <PaginationItem key={totalPages}>
+          <PaginationLink
+            onClick={() => setCurrentPage(totalPages)}
+            isActive={currentPage === totalPages}
+            className="cursor-pointer"
+          >
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    return items;
+  };
+
   // Calendar logic
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -147,9 +345,9 @@ export default function Deadlines() {
   const paddedDays = Array(startPadding).fill(null).concat(daysInMonth);
 
   const getDeadlinesForDay = (day: Date) => {
-    return deadlines.filter(d => {
-      if (d.next_visit_date) {
-        return isSameDay(new Date(d.next_visit_date), day);
+    return filteredDeadlines.filter(d => {
+      if (d.next_validation_date) {
+        return isSameDay(new Date(d.next_validation_date), day);
       }
       return false;
     });
@@ -168,7 +366,7 @@ export default function Deadlines() {
         </div>
         <Button onClick={openNewDialog}>
           <Plus className="h-4 w-4 mr-2" />
-          Nuova Scadenza
+          Pianifica Valutazione
         </Button>
       </div>
 
@@ -203,17 +401,117 @@ export default function Deadlines() {
           </SelectContent>
         </Select>
 
-        <Select value={filterCompany} onValueChange={setFilterCompany}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Azienda" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tutte le aziende</SelectItem>
-            {companies.map(c => (
-              <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-[200px] justify-between">
+              <span className="truncate">
+                {filterCompanies.size === 0
+                  ? "Tutte le aziende"
+                  : filterCompanies.size === 1
+                  ? companies.find(c => filterCompanies.has(c.id))?.name || "1 azienda"
+                  : `${filterCompanies.size} aziende`}
+              </span>
+              <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[200px] p-0" align="start">
+            <div className="max-h-[300px] overflow-y-auto p-2">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md cursor-pointer" onClick={() => setFilterCompanies(new Set())}>
+                  <Checkbox checked={filterCompanies.size === 0} />
+                  <label className="text-sm font-medium cursor-pointer flex-1">Tutte le aziende</label>
+                </div>
+                {companies.map(c => {
+                  const isChecked = filterCompanies.has(c.id);
+                  return (
+                    <div
+                      key={c.id}
+                      className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md cursor-pointer"
+                      onClick={() => {
+                        const newSet = new Set(filterCompanies);
+                        if (isChecked) {
+                          newSet.delete(c.id);
+                        } else {
+                          newSet.add(c.id);
+                        }
+                        setFilterCompanies(newSet);
+                      }}
+                    >
+                      <Checkbox checked={isChecked} />
+                      <label className="text-sm cursor-pointer flex-1 truncate">{c.name}</label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {view === 'list' && (
+          <>
+            {/* Toggle Vista Card/Table */}
+            <div className="flex items-center border rounded-md">
+              <Button
+                variant={viewMode === 'card' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('card')}
+                className="rounded-r-none"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className="rounded-l-none"
+              >
+                <Calendar className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Select Elementi per Pagina */}
+            <Select value={perPage.toString()} onValueChange={(value) => setPerPage(Number(value))}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 per pagina</SelectItem>
+                <SelectItem value="25">25 per pagina</SelectItem>
+                <SelectItem value="50">50 per pagina</SelectItem>
+                <SelectItem value="100">100 per pagina</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Dropdown Esporta */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="mr-2 h-4 w-4" />
+                  Esporta
+                  {hasSelection && (
+                    <Badge variant="secondary" className="ml-2">
+                      {selectedIds.size}
+                    </Badge>
+                  )}
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  Esporta CSV (pagina corrente)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  Esporta Excel (pagina corrente)
+                </DropdownMenuItem>
+                {hasSelection && (
+                  <DropdownMenuItem onClick={handleExportSelected}>
+                    Esporta selezionati ({selectedIds.size})
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        )}
       </div>
 
       <Tabs value={view} onValueChange={(v) => setView(v as typeof view)}>
@@ -243,18 +541,151 @@ export default function Deadlines() {
                 Crea la prima scadenza
               </Button>
             </div>
-          ) : (
+          ) : viewMode === 'card' ? (
             <div className="grid gap-4 md:grid-cols-2">
-              {filteredDeadlines.map(deadline => (
+              {paginatedDeadlines.map(deadline => (
                 <DeadlineCard
                   key={deadline.id}
                   deadline={deadline}
                   onEdit={handleEdit}
-                  onDelete={(id) => deleteMutation.mutate(id)}
-                  onComplete={(id) => completeMutation.mutate(id)}
+                  onDelete={handleDeleteClick}
+                  onComplete={(id) => {
+                    const deadline = deadlines.find(d => d.id === id);
+                    if (deadline) handleCompleteClick(deadline);
+                  }}
+                  riskTypes={riskTypes}
                 />
               ))}
             </div>
+          ) : (
+            <>
+              <div className="bg-card border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={isAllSelected}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
+                      <TableHead className="font-medium">Titolo</TableHead>
+                      <TableHead className="font-medium">Azienda</TableHead>
+                      <TableHead className="font-medium">Tipo Rischio</TableHead>
+                      <TableHead className="font-medium">Data Ultima Validazione</TableHead>
+                      <TableHead className="font-medium">Data Prossima Validazione</TableHead>
+                      <TableHead className="font-medium">Stato</TableHead>
+                      <TableHead className="text-right font-medium">Azioni</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedDeadlines.map((deadline) => (
+                      <TableRow key={deadline.id} className="hover:bg-muted/20">
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedIds.has(deadline.id)}
+                            onCheckedChange={() => toggleSelection(deadline.id)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">{deadline.title}</TableCell>
+                        <TableCell>
+                          {deadline.company_name || '-'}
+                          {deadline.company_branch_name && ` (${deadline.company_branch_name})`}
+                        </TableCell>
+                        <TableCell>
+                          {deadline.risk_type_id 
+                            ? riskTypes.find(r => r.id === deadline.risk_type_id)?.name || '-'
+                            : '-'
+                          }
+                        </TableCell>
+                        <TableCell>{formatDeadlineDate(deadline.last_validation_date)}</TableCell>
+                        <TableCell>{formatDeadlineDate(deadline.next_validation_date)}</TableCell>
+                        <TableCell>
+                          <Badge variant={deadline.status === 'overdue' ? 'destructive' : 'secondary'}>
+                            {deadline.status === 'overdue' ? 'Scaduto' : deadline.status === 'pending' ? 'In attesa' : '-'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEdit(deadline)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteClick(deadline.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            {deadline.status !== 'completed' && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleCompleteClick(deadline)}
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Paginazione */}
+              {totalPages > 1 && (
+                <div className="flex justify-center mt-6">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                      
+                      {renderPaginationItems()}
+                      
+                      <PaginationItem>
+                        <PaginationNext 
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+
+              {/* Info paginazione */}
+              {filteredDeadlines.length > 0 && (
+                <div className="flex justify-between items-center mt-4 text-sm text-muted-foreground">
+                  <div>
+                    Mostrando {startIndex + 1} - {Math.min(startIndex + perPage, filteredDeadlines.length)} di {filteredDeadlines.length} scadenze
+                  </div>
+                  {hasSelection && (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">
+                        {selectedIds.size} selezionati
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearSelection}
+                      >
+                        Deseleziona tutti
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
 
@@ -303,14 +734,20 @@ export default function Deadlines() {
                       {dayDeadlines.slice(0, 2).map(d => (
                         <div 
                           key={d.id}
-                          className={`text-xs p-1 rounded truncate cursor-pointer hover:opacity-80 ${
+                          className={`text-xs p-1 rounded cursor-pointer hover:opacity-80 ${
                             d.status === 'overdue' 
                               ? 'bg-destructive/20 text-destructive' 
                               : 'bg-primary/20 text-primary'
                           }`}
                           onClick={() => handleEdit(d)}
+                          title={`${d.title}${d.company_name ? ` - ${d.company_name}` : ''}`}
                         >
-                          {d.title}
+                          <div className="truncate font-medium">{d.title}</div>
+                          {d.company_name && (
+                            <div className="truncate text-[10px] opacity-80 mt-0.5">
+                              {d.company_name}
+                            </div>
+                          )}
                         </div>
                       ))}
                       {dayDeadlines.length > 2 && (
@@ -330,18 +767,62 @@ export default function Deadlines() {
       <DeadlineDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        deadline={editingDeadline}
         companies={companies}
         riskTypes={riskTypes}
-        onSave={handleSave}
+        onSave={handleCreate}
         onQuickCreateCompany={() => setQuickCompanyDialogOpen(true)}
       />
+
+      {editingDeadline && (
+        <DeadlineEditSheet
+          open={editingDeadlineSheetOpen}
+          onOpenChange={(open) => {
+            setEditingDeadlineSheetOpen(open);
+            if (!open) {
+              setEditingDeadline(undefined);
+            }
+          }}
+          deadline={editingDeadline}
+          companies={companies}
+          riskTypes={riskTypes}
+          onSave={handleUpdate}
+          onQuickCreateCompany={() => setQuickCompanyDialogOpen(true)}
+        />
+      )}
 
       <QuickCompanyDialog
         open={quickCompanyDialogOpen}
         onOpenChange={setQuickCompanyDialogOpen}
         onSave={handleCreateCompany}
       />
+
+      {completingDeadline && (
+        <CompleteValidationDialog
+          open={completeDialogOpen}
+          onOpenChange={setCompleteDialogOpen}
+          deadline={completingDeadline}
+          onComplete={handleCompleteValidation}
+        />
+      )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Conferma eliminazione</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare questa scadenza? Questa azione non può essere annullata.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeadlineToDelete(null)}>
+              Annulla
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Elimina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

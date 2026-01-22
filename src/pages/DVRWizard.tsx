@@ -23,6 +23,7 @@ export default function DVRWizard() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [dvrName, setDvrName] = useState('');
   const [companyId, setCompanyId] = useState<number | undefined>();
+  const [companyBranchId, setCompanyBranchId] = useState<number | undefined>();
   const [company, setCompany] = useState<Company | undefined>();
   const [classifiedFiles, setClassifiedFiles] = useState<FileWithClassification[]>([]);
   const [createdDvrId, setCreatedDvrId] = useState<string>('');
@@ -34,10 +35,11 @@ export default function DVRWizard() {
     }
   }, [companyId]);
 
-  const handleFilesSelected = (files: File[], name: string, selectedCompanyId?: number) => {
+  const handleFilesSelected = (files: File[], name: string, selectedCompanyId?: number, selectedCompanyBranchId?: number) => {
     setSelectedFiles(files);
     setDvrName(name);
     setCompanyId(selectedCompanyId);
+    setCompanyBranchId(selectedCompanyBranchId);
     setCurrentStep('classification');
   };
 
@@ -90,7 +92,8 @@ export default function DVRWizard() {
           dvrName,
           classifiedFiles.map(f => f.file),
           companyId,
-          undefined // description
+          undefined, // description
+          companyBranchId
         );
         
         // Aggiorna ogni file con risk_id e include

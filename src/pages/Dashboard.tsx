@@ -61,8 +61,8 @@ export default function Dashboard() {
   // Calculate statistics
   const overdueDeadlines = deadlines.filter(d => d.status === 'overdue');
   const upcomingDeadlines = deadlines
-    .filter(d => d.status === 'pending' && d.next_visit_date)
-    .sort((a, b) => new Date(a.next_visit_date!).getTime() - new Date(b.next_visit_date!).getTime())
+    .filter(d => d.status === 'pending' && d.next_validation_date)
+    .sort((a, b) => new Date(a.next_validation_date!).getTime() - new Date(b.next_validation_date!).getTime())
     .slice(0, 5);
 
   const dvrDrafts = dvrs.filter(d => d.stato === 'BOZZA');
@@ -133,7 +133,7 @@ export default function Dashboard() {
               {overdueDeadlines.length} {overdueDeadlines.length === 1 ? 'scadenza' : 'scadenze'} in ritardo
             </p>
             <p className="text-sm text-muted-foreground">
-              Ci sono visite non ancora effettuate oltre la data prevista
+              Ci sono valutazioni non ancora effettuate oltre la data prevista
             </p>
           </div>
           <Button asChild variant="destructive" size="sm">
@@ -268,7 +268,7 @@ export default function Dashboard() {
                     {overdueDeadlines.length}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Visite da completare
+                    Valutazioni da completare
                   </p>
                 </CardContent>
               </Link>
@@ -327,7 +327,7 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{deadline.title}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {deadline.company_name} • {formatDate(deadline.next_visit_date)}
+                        {deadline.company_name} • {formatDate(deadline.next_validation_date)}
                       </p>
                     </div>
                   </Link>
@@ -486,7 +486,7 @@ export default function Dashboard() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{deadline.title}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {deadline.company_name} • Scaduto: {formatDate(deadline.next_visit_date)}
+                      {deadline.company_name} • Scaduto: {formatDate(deadline.next_validation_date)}
                     </p>
                   </div>
                 </Link>

@@ -49,7 +49,9 @@ export function DVRInfoEditor({ dvr, onUpdate }: DVRInfoEditorProps) {
   const [descrizione, setDescrizione] = useState(dvr.descrizione || dvr.description || "");
   const [stato, setStato] = useState<string>((dvr.stato || dvr.status || 'BOZZA') as string);
   const [companyId, setCompanyId] = useState<number | undefined>(dvr.company_id || dvr.companyId);
+  const [companyBranchId, setCompanyBranchId] = useState<number | undefined>(dvr.company_branch_id || dvr.companyBranchId);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   // Carica le aziende quando il dialog si apre
@@ -58,6 +60,25 @@ export function DVRInfoEditor({ dvr, onUpdate }: DVRInfoEditorProps) {
       companyApi.getAll().then(setCompanies).catch(console.error);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (companyId) {
+      const company = companies.find(c => c.id === companyId);
+      setSelectedCompany(company || null);
+      // Auto-select main branch if available
+      if (company?.branches && company.branches.length > 0) {
+        const mainBranch = company.branches.find(b => b.is_main);
+        if (mainBranch && mainBranch.id && !companyBranchId) {
+          setCompanyBranchId(mainBranch.id);
+        }
+      } else {
+        setCompanyBranchId(undefined);
+      }
+    } else {
+      setSelectedCompany(null);
+      setCompanyBranchId(undefined);
+    }
+  }, [companyId, companies]);
 
   const handleSave = async () => {
     try {
@@ -76,6 +97,7 @@ export function DVRInfoEditor({ dvr, onUpdate }: DVRInfoEditorProps) {
         descrizione: validated.descrizione,
         stato: validated.stato as DVRStatus,
         company_id: companyId,
+        company_branch_id: companyBranchId,
         updated_by: 'current_user'
       });
 
@@ -202,6 +224,31 @@ export function DVRInfoEditor({ dvr, onUpdate }: DVRInfoEditorProps) {
               </SelectContent>
             </Select>
           </div>
+
+          {selectedCompany && selectedCompany.branches && selectedCompany.branches.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="branch">Stabilimento</Label>
+              <Select 
+                value={companyBranchId?.toString() || "none"} 
+                onValueChange={(value) => setCompanyBranchId(value === "none" ? undefined : parseInt(value))}
+              >
+                <SelectTrigger id="branch">
+                  <SelectValue placeholder="Seleziona uno stabilimento (opzionale)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nessuno stabilimento</SelectItem>
+                  {selectedCompany.branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id?.toString() || ""}>
+                      <div className="flex items-center gap-2">
+                        <span>{branch.name}</span>
+                        {branch.is_main && <span className="text-xs text-muted-foreground">(Principale)</span>}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2">

@@ -32,7 +32,7 @@ interface NewUploadDialogProps {
 export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, onSuccess }: NewUploadDialogProps) {
   const [mansione, setMansione] = useState("");
   const [reparto, setReparto] = useState("");
-  const [ruolo, setRuolo] = useState("");
+  const [area, setArea] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [company, setCompany] = useState<Company | null>(null);
@@ -95,7 +95,7 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, 
   };
 
   const handleSubmit = async () => {
-    // Only files are required now, mansione/reparto/ruolo are optional
+    // Only files are required now, mansione/reparto/area are optional
     if (files.length === 0) {
       toast({
         title: "Errore",
@@ -107,7 +107,7 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, 
 
     setLoading(true);
     try {
-      await createUpload(elaborationId, mansione.trim(), reparto.trim(), ruolo.trim(), files);
+      await createUpload(elaborationId, mansione.trim(), reparto.trim(), area.trim(), files);
 
       toast({
         title: "Upload completato",
@@ -148,7 +148,7 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, 
   const resetForm = () => {
     setMansione("");
     setReparto("");
-    setRuolo("");
+    setArea("");
     setFiles([]);
   };
 
@@ -165,9 +165,9 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, 
 
   const mansioni = company?.mansioni || [];
   const reparti = company?.reparti || [];
-  const ruoli = company?.ruoli || [];
+  const aree = company?.aree || [];
 
-  const hasCompanyOptions = mansioni.length > 0 || reparti.length > 0 || ruoli.length > 0;
+  const hasCompanyOptions = mansioni.length > 0 || reparti.length > 0 || aree.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -175,13 +175,13 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, 
         <DialogHeader>
           <DialogTitle>Nuovo Caricamento</DialogTitle>
           <DialogDescription>
-            Aggiungi un nuovo caricamento specificando mansione, reparto e ruolo
+            Aggiungi un nuovo caricamento specificando mansione, reparto e area
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="mansione">Mansione *</Label>
+              <Label htmlFor="mansione">Mansione</Label>
               {mansioni.length > 0 ? (
                 <Select value={mansione} onValueChange={setMansione}>
                   <SelectTrigger>
@@ -203,7 +203,7 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, 
               )}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="reparto">Reparto *</Label>
+              <Label htmlFor="reparto">Reparto</Label>
               {reparti.length > 0 ? (
                 <Select value={reparto} onValueChange={setReparto}>
                   <SelectTrigger>
@@ -225,24 +225,24 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, 
               )}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="ruolo">Ruolo *</Label>
-              {ruoli.length > 0 ? (
-                <Select value={ruolo} onValueChange={setRuolo}>
+              <Label htmlFor="area">Area</Label>
+              {aree.length > 0 ? (
+                <Select value={area} onValueChange={setArea}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleziona..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {ruoli.map((r) => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                    {aree.map((a) => (
+                      <SelectItem key={a} value={a}>{a}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               ) : (
                 <Input
-                  id="ruolo"
-                  placeholder="Es. Operaio"
-                  value={ruolo}
-                  onChange={(e) => setRuolo(e.target.value)}
+                  id="area"
+                  placeholder="Es. Produzione"
+                  value={area}
+                  onChange={(e) => setArea(e.target.value)}
                 />
               )}
             </div>
@@ -250,7 +250,7 @@ export function NewUploadDialog({ open, onOpenChange, elaborationId, companyId, 
 
           {!hasCompanyOptions && companyId && (
             <p className="text-sm text-muted-foreground">
-              Nessuna mansione, reparto o ruolo configurato per questa azienda. Puoi inserirli manualmente o configurarli nelle impostazioni azienda.
+              Nessuna mansione, reparto o area configurato per questa azienda. Puoi inserirli manualmente o configurarli nelle impostazioni azienda.
             </p>
           )}
 

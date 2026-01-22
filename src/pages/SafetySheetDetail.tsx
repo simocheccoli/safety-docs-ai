@@ -15,12 +15,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -36,19 +30,20 @@ import { Elaboration, ElaborationUpload, ElaborationFile } from "@/types/elabora
 import { 
   fetchElaborationById, 
   fetchElaborationUploads, 
-  deleteUpload, 
+  deleteUpload,
+  deleteFile,
   generateElaboration,
   downloadExcel,
   downloadZip,
-  fetchFilePreview
 } from "@/lib/elaborationApi";
 import { useToast } from "@/hooks/use-toast";
 import { NewUploadDialog } from "@/components/safety-sheets/NewUploadDialog";
+import { useFilePreview } from "@/contexts/FilePreviewContext";
 
 interface FileWithContext extends ElaborationFile {
   mansione: string;
   reparto: string;
-  ruolo: string;
+  area: string;
 }
 
 export default function SafetySheetDetail() {
@@ -62,13 +57,13 @@ export default function SafetySheetDetail() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [uploadToDelete, setUploadToDelete] = useState<number | null>(null);
+  const [deleteFileDialogOpen, setDeleteFileDialogOpen] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<{uploadId: number, fileId: number} | null>(null);
   const [generatingElaboration, setGeneratingElaboration] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [downloadingZip, setDownloadingZip] = useState(false);
   const [expandedUploads, setExpandedUploads] = useState<Set<number>>(new Set());
-  const [previewFile, setPreviewFile] = useState<FileWithContext | null>(null);
-  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
+  const { openPreview } = useFilePreview();
 
   useEffect(() => {
     if (id) {
@@ -136,6 +131,33 @@ export default function SafetySheetDetail() {
     } finally {
       setDeleteDialogOpen(false);
       setUploadToDelete(null);
+    }
+  };
+
+  const handleDeleteFileClick = (uploadId: number, fileId: number) => {
+    setFileToDelete({ uploadId, fileId });
+    setDeleteFileDialogOpen(true);
+  };
+
+  const handleDeleteFileConfirm = async () => {
+    if (fileToDelete === null || !id) return;
+    
+    try {
+      await deleteFile(Number(id), fileToDelete.uploadId, fileToDelete.fileId);
+      toast({
+        title: "Successo",
+        description: "File eliminato con successo",
+      });
+      loadData();
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il file",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteFileDialogOpen(false);
+      setFileToDelete(null);
     }
   };
 
@@ -215,40 +237,17 @@ export default function SafetySheetDetail() {
     });
   };
 
-  const handlePreviewFile = async (file: FileWithContext) => {
-    setPreviewFile(file);
-    
-    // Clean up previous blob URL
-    if (previewBlobUrl) {
-      window.URL.revokeObjectURL(previewBlobUrl);
-      setPreviewBlobUrl(null);
-    }
-    
-    // If file has previewUrl, fetch with Bearer auth
-    if (file.previewUrl) {
-      setPreviewLoading(true);
-      try {
-        const blobUrl = await fetchFilePreview(file.previewUrl);
-        setPreviewBlobUrl(blobUrl);
-      } catch (error) {
-        console.error('Error fetching file preview:', error);
-        toast({
-          title: "Errore",
-          description: "Impossibile caricare l'anteprima del file",
-          variant: "destructive",
-        });
-      } finally {
-        setPreviewLoading(false);
-      }
-    }
-  };
-
-  const handleClosePreview = () => {
-    setPreviewFile(null);
-    if (previewBlobUrl) {
-      window.URL.revokeObjectURL(previewBlobUrl);
-      setPreviewBlobUrl(null);
-    }
+  const handlePreviewFile = (file: FileWithContext) => {
+    openPreview({
+      previewUrl: file.previewUrl || '',
+      filename: file.filename,
+      size: file.size,
+      metadata: {
+        Mansione: file.mansione,
+        Reparto: file.reparto,
+        Area: file.area,
+      },
+    });
   };
 
   const formatDate = (dateString: string | undefined | null) => {
@@ -440,7 +439,7 @@ export default function SafetySheetDetail() {
             <div>
               <CardTitle>Caricamenti</CardTitle>
               <CardDescription>
-                Elenco dei caricamenti suddivisi per mansione, reparto e ruolo. Clicca su un caricamento per vedere gli allegati.
+                Elenco dei caricamenti suddivisi per mansione, reparto e area. Clicca su un caricamento per vedere gli allegati.
               </CardDescription>
             </div>
             <Button onClick={() => setUploadDialogOpen(true)} variant="outline" className="gap-2">
@@ -482,21 +481,27 @@ export default function SafetySheetDetail() {
                                     <Briefcase className="h-3 w-3" />
                                     Mansione
                                   </div>
-                                  <div className="font-medium">{upload.mansione}</div>
+                                  <div className="font-medium">
+                                    {upload.mansione || <span className="text-muted-foreground/50 italic">Non specificato</span>}
+                                  </div>
                                 </div>
                                 <div className="min-w-[120px]">
                                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-0.5">
                                     <Building className="h-3 w-3" />
                                     Reparto
                                   </div>
-                                  <div className="font-medium">{upload.reparto}</div>
+                                  <div className="font-medium">
+                                    {upload.reparto || <span className="text-muted-foreground/50 italic">Non specificato</span>}
+                                  </div>
                                 </div>
                                 <div className="min-w-[100px]">
                                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-0.5">
                                     <User className="h-3 w-3" />
-                                    Ruolo
+                                    Area
                                   </div>
-                                  <div className="font-medium">{upload.ruolo}</div>
+                                  <div className="font-medium">
+                                    {upload.area || <span className="text-muted-foreground/50 italic">Non specificato</span>}
+                                  </div>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                   <FileText className="h-4 w-4 text-muted-foreground" />
@@ -544,24 +549,38 @@ export default function SafetySheetDetail() {
                                       {formatFileSize(file.size)}
                                     </div>
                                   </div>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
                                         onClick={() => handlePreviewFile({
                                           ...file,
-                                          mansione: upload.mansione,
-                                          reparto: upload.reparto,
-                                          ruolo: upload.ruolo
+                                          mansione: upload.mansione || 'Non specificato',
+                                          reparto: upload.reparto || 'Non specificato',
+                                          area: upload.area || 'Non specificato'
                                         })}
-                                      >
-                                        <Eye className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Anteprima PDF</TooltipContent>
-                                  </Tooltip>
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Anteprima PDF</TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => handleDeleteFileClick(upload.id, file.id)}
+                                          className="hover:bg-destructive/10"
+                                        >
+                                          <Trash2 className="h-4 w-4 text-destructive/70" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Elimina file</TooltipContent>
+                                    </Tooltip>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -605,68 +624,26 @@ export default function SafetySheetDetail() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* PDF Preview Sheet */}
-        <Sheet open={!!previewFile} onOpenChange={(open) => !open && handleClosePreview()}>
-          <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col p-0">
-            <SheetHeader className="p-6 border-b">
-              <div className="flex items-center justify-between">
-                <SheetTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-destructive" />
-                  <span className="truncate">{previewFile?.filename}</span>
-                </SheetTitle>
-              </div>
-              {previewFile && (
-                <div className="flex gap-4 text-sm text-muted-foreground mt-2">
-                  <div className="flex items-center gap-1.5">
-                    <Briefcase className="h-3.5 w-3.5" />
-                    <span>{previewFile.mansione}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Building className="h-3.5 w-3.5" />
-                    <span>{previewFile.reparto}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <User className="h-3.5 w-3.5" />
-                    <span>{previewFile.ruolo}</span>
-                  </div>
-                </div>
-              )}
-            </SheetHeader>
-            <div className="flex-1 bg-muted/30 overflow-hidden">
-              {previewFile && (
-                <>
-                  {previewLoading ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-primary" />
-                        <p className="text-sm text-muted-foreground">Caricamento anteprima...</p>
-                      </div>
-                    </div>
-                  ) : previewBlobUrl ? (
-                    <iframe
-                      src={previewBlobUrl}
-                      className="w-full h-full border-0"
-                      title={`Anteprima di ${previewFile.filename}`}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                      <div className="text-center p-8">
-                        <FileText className="h-16 w-16 mx-auto mb-4 text-destructive/50" />
-                        <p className="font-medium mb-2">{previewFile.filename}</p>
-                        <p className="text-sm mb-4">{formatFileSize(previewFile.size)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {previewFile.previewUrl 
-                            ? "Errore nel caricamento dell'anteprima."
-                            : "Anteprima non disponibile per questo file."}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
+        <AlertDialog open={deleteFileDialogOpen} onOpenChange={setDeleteFileDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Conferma eliminazione</AlertDialogTitle>
+              <AlertDialogDescription>
+                Sei sicuro di voler eliminare questo file? Questa azione non può essere annullata.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annulla</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteFileConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Elimina
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </div>
     </TooltipProvider>
   );

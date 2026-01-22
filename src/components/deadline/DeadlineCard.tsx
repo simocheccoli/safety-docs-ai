@@ -5,18 +5,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Deadline, INTERVAL_LABELS } from "@/types/deadline";
-import { Building2, Calendar, Clock, MoreVertical, Pencil, Trash2, CheckCircle2, AlertTriangle, ShieldAlert } from "lucide-react";
+import { RiskType } from "@/types/risk";
+import { Building2, Calendar, Clock, MoreVertical, Pencil, Trash2, CheckCircle2, AlertTriangle, ShieldAlert, History } from "lucide-react";
 
 interface DeadlineCardProps {
   deadline: Deadline;
   onEdit: (deadline: Deadline) => void;
   onDelete: (id: number) => void;
   onComplete: (id: number) => void;
+  riskTypes?: RiskType[];
 }
 
-export function DeadlineCard({ deadline, onEdit, onDelete, onComplete }: DeadlineCardProps) {
+export function DeadlineCard({ deadline, onEdit, onDelete, onComplete, riskTypes = [] }: DeadlineCardProps) {
   const isOverdue = deadline.status === 'overdue';
-  const isOnRequest = deadline.next_visit_interval === 'on_request';
+  const isOnRequest = deadline.next_validation_interval === 'on_request';
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return null;
@@ -36,6 +38,12 @@ export function DeadlineCard({ deadline, onEdit, onDelete, onComplete }: Deadlin
                   Scaduto
                 </Badge>
               )}
+              {deadline.validations && deadline.validations.length > 0 && (
+                <Badge variant="secondary" className="shrink-0">
+                  <History className="h-3 w-3 mr-1" />
+                  {deadline.validations.length}
+                </Badge>
+              )}
             </div>
 
             {deadline.description && (
@@ -48,37 +56,38 @@ export function DeadlineCard({ deadline, onEdit, onDelete, onComplete }: Deadlin
               <span className="flex items-center gap-1.5">
                 <Building2 className="h-3.5 w-3.5" />
                 {deadline.company_name || `Azienda #${deadline.company_id}`}
+                {deadline.company_branch_name && ` - ${deadline.company_branch_name}`}
               </span>
               
-              {deadline.risk_type_name && (
+              {deadline.risk_type_id && riskTypes.length > 0 && (
                 <span className="flex items-center gap-1.5">
                   <ShieldAlert className="h-3.5 w-3.5" />
-                  {deadline.risk_type_name}
+                  {riskTypes.find(r => r.id === deadline.risk_type_id)?.name || deadline.risk_type_id}
                 </span>
               )}
               
               <span className="flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
-                {INTERVAL_LABELS[deadline.next_visit_interval]}
+                {INTERVAL_LABELS[deadline.next_validation_interval]}
               </span>
             </div>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm">
-              {deadline.last_visit_date && (
+              {deadline.last_validation_date && (
                 <span className="flex items-center gap-1.5 text-muted-foreground">
                   <Calendar className="h-3.5 w-3.5" />
-                  Ultima: {formatDate(deadline.last_visit_date)}
+                  Ultima valutazione: {formatDate(deadline.last_validation_date)}
                 </span>
               )}
               
-              {deadline.next_visit_date && (
+              {deadline.next_validation_date && (
                 <span className={`flex items-center gap-1.5 ${isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                   <Calendar className="h-3.5 w-3.5" />
-                  Prossima: {formatDate(deadline.next_visit_date)}
+                  Prossima valutazione: {formatDate(deadline.next_validation_date)}
                 </span>
               )}
               
-              {isOnRequest && !deadline.next_visit_date && (
+              {isOnRequest && !deadline.next_validation_date && (
                 <Badge variant="secondary" className="text-xs">
                   Su richiesta cliente
                 </Badge>

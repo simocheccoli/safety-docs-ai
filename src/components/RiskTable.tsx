@@ -7,6 +7,7 @@ import { RiskType } from "@/types/risk";
 import { deleteRiskType } from "@/lib/riskApi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -30,6 +31,10 @@ import { toast } from "@/hooks/use-toast";
 interface RiskTableProps {
   risks: RiskType[];
   onRefresh: () => void;
+  selectedIds?: Set<string | number>;
+  onToggleSelection?: (id: string | number) => void;
+  onToggleSelectAll?: () => void;
+  isAllSelected?: boolean;
 }
 
 const statusConfig = {
@@ -38,7 +43,14 @@ const statusConfig = {
   active: { label: "Attivo", className: "bg-blue-100 text-blue-800 border-blue-300" },
 };
 
-export function RiskTable({ risks, onRefresh }: RiskTableProps) {
+export function RiskTable({ 
+  risks, 
+  onRefresh,
+  selectedIds = new Set(),
+  onToggleSelection,
+  onToggleSelectAll,
+  isAllSelected = false,
+}: RiskTableProps) {
   const navigate = useNavigate();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -81,6 +93,14 @@ export function RiskTable({ risks, onRefresh }: RiskTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
+              {onToggleSelectAll && (
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={onToggleSelectAll}
+                  />
+                </TableHead>
+              )}
               <TableHead>Nome Rischio</TableHead>
               <TableHead>Descrizione</TableHead>
               <TableHead>Stato</TableHead>
@@ -92,6 +112,14 @@ export function RiskTable({ risks, onRefresh }: RiskTableProps) {
           <TableBody>
             {risks.map((risk) => (
               <TableRow key={risk.id}>
+                {onToggleSelection && (
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedIds.has(risk.id)}
+                      onCheckedChange={() => onToggleSelection(risk.id)}
+                    />
+                  </TableCell>
+                )}
                 <TableCell className="font-medium">{risk.name}</TableCell>
                 <TableCell className="max-w-md truncate">{risk.description}</TableCell>
                 <TableCell>

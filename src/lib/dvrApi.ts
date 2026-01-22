@@ -128,8 +128,9 @@ export const dvrApi = {
   createDVR: async (
     title: string, 
     files: File[], 
-    companyId?: number, 
-    description?: string
+    companyId?: number,
+    description?: string,
+    companyBranchId?: number
   ): Promise<DVR> => {
     if (isDemoMode()) {
       await simulateDelay(500);
@@ -166,7 +167,8 @@ export const dvrApi = {
     const dvrData = await apiClient.post<any>('/dvr', {
       title,
       description,
-      companyId
+      companyId,
+      companyBranchId
     });
     
     // Upload files if any
@@ -234,6 +236,7 @@ export const dvrApi = {
     if (data.descrizione !== undefined) updatePayload.description = data.descrizione;
     if (data.stato !== undefined) updatePayload.status = mapStatusToBackend(data.stato);
     if (data.company_id !== undefined) updatePayload.companyId = data.company_id;
+    if (data.company_branch_id !== undefined) updatePayload.companyBranchId = data.company_branch_id;
     
     const result = await apiClient.patch<any>(`/dvr/${id}`, updatePayload);
     return mapDVRFromBackend(result);

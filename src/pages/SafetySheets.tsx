@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Eye, Trash2, Calendar, ArrowUpDown, ArrowUp, ArrowDown, X, Building2, FileText, FolderUp, Loader2 } from "lucide-react";
+import { Plus, Eye, Trash2, Calendar, ArrowUpDown, ArrowUp, ArrowDown, X, Building2, FileText, FolderUp, Loader2, Download, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Elaboration } from "@/types/elaboration";
+import { useListPagination } from "@/hooks/useListPagination";
+import { exportToCSV, exportToExcel } from "@/utils/exportUtils";
 import {
   Table,
   TableBody,
@@ -19,6 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Pagination,
   PaginationContent,
@@ -55,10 +65,8 @@ type SortDirection = 'asc' | 'desc' | null;
 export default function SafetySheets() {
   const navigate = useNavigate();
   const [allElaborations, setAllElaborations] = useState<Elaboration[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const perPage = 10;
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,7 +101,6 @@ export default function SafetySheets() {
   const handleNewElaboration = () => {
     loadElaborations();
     setDialogOpen(false);
-    setCurrentPage(1);
   };
 
   const handleViewDetails = (elaboration: Elaboration) => {
@@ -192,7 +199,6 @@ export default function SafetySheets() {
       setSortField(field);
       setSortDirection('asc');
     }
-    setCurrentPage(1);
   };
 
   const getSortIcon = (field: SortField) => {
@@ -217,7 +223,8 @@ export default function SafetySheets() {
     let matchesDateTo = true;
     
     if (dateFrom) {
-      const elaborationDate = new Date(elab.begin_process);
+      const creationDate = elab.created_at || elab.createdAt || elab.begin_process;
+      const elaborationDate = new Date(creationDate);
       elaborationDate.setHours(0, 0, 0, 0);
       const filterDate = new Date(dateFrom);
       filterDate.setHours(0, 0, 0, 0);
@@ -225,7 +232,8 @@ export default function SafetySheets() {
     }
     
     if (dateTo) {
-      const elaborationDate = new Date(elab.begin_process);
+      const creationDate = elab.created_at || elab.createdAt || elab.begin_process;
+      const elaborationDate = new Date(creationDate);
       elaborationDate.setHours(0, 0, 0, 0);
       const filterDate = new Date(dateTo);
       filterDate.setHours(0, 0, 0, 0);
@@ -241,8 +249,10 @@ export default function SafetySheets() {
       let bVal: any = b[sortField];
 
       if (sortField === 'begin_process') {
-        aVal = new Date(aVal).getTime();
-        bVal = new Date(bVal).getTime();
+        const aDate = a.created_at || a.createdAt || a.begin_process;
+        const bDate = b.created_at || b.createdAt || b.begin_process;
+        aVal = new Date(aDate).getTime();
+        bVal = new Date(bDate).getTime();
       } else if (sortField === 'title' || sortField === 'status') {
         aVal = (aVal || '').toLowerCase();
         bVal = (bVal || '').toLowerCase();
@@ -254,11 +264,28 @@ export default function SafetySheets() {
     });
   }
 
-  const totalFiltered = processedElaborations.length;
-  const totalPages = Math.ceil(totalFiltered / perPage);
+  // Usa hook per paginazione e selezione
+  const {
+    currentPage,
+    setCurrentPage,
+    perPage,
+    setPerPage,
+    totalPages,
+    paginatedItems: paginatedElaborations,
+    startIndex,
+    selectedIds,
+    toggleSelection,
+    toggleSelectAll,
+    clearSelection,
+    isAllSelected,
+    hasSelection,
+    getSelectedItems,
+  } = useListPagination(processedElaborations, 10);
 
-  const startIndex = (currentPage - 1) * perPage;
-  const paginatedElaborations = processedElaborations.slice(startIndex, startIndex + perPage);
+  // Reset pagina quando cambiano i filtri
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, dateFrom, dateTo, sortField, sortDirection]);
 
   const clearFilters = () => {
     setSearchQuery("");
@@ -268,6 +295,67 @@ export default function SafetySheets() {
     setSortField(null);
     setSortDirection(null);
     setCurrentPage(1);
+  };
+
+  // Funzioni export
+  const handleExportCSV = () => {
+    exportToCSV(
+      paginatedElaborations,
+      ['Titolo', 'Azienda', 'Caricamenti', 'Stato', 'Data Creazione'],
+      (elab) => [
+        elab.title || '',
+        elab.company_name || '',
+        elab.uploads_count || 0,
+        elab.status || '',
+        formatDate(elab.created_at || elab.createdAt || elab.begin_process),
+      ],
+      'schede_sicurezza'
+    );
+    toast({
+      title: 'Successo',
+      description: 'File CSV esportato con successo',
+    });
+  };
+
+  const handleExportExcel = async () => {
+    await exportToExcel(
+      paginatedElaborations,
+      ['Titolo', 'Azienda', 'Caricamenti', 'Stato', 'Data Creazione'],
+      (elab) => [
+        elab.title || '',
+        elab.company_name || '',
+        elab.uploads_count || 0,
+        elab.status || '',
+        formatDate(elab.created_at || elab.createdAt || elab.begin_process),
+      ],
+      'schede_sicurezza'
+    );
+    toast({
+      title: 'Successo',
+      description: 'File Excel esportato con successo',
+    });
+  };
+
+  const handleExportSelected = async () => {
+    const selected = getSelectedItems();
+    if (selected.length === 0) return;
+
+    await exportToExcel(
+      selected,
+      ['Titolo', 'Azienda', 'Caricamenti', 'Stato', 'Data Creazione'],
+      (elab) => [
+        elab.title || '',
+        elab.company_name || '',
+        elab.uploads_count || 0,
+        elab.status || '',
+        formatDate(elab.created_at || elab.createdAt || elab.begin_process),
+      ],
+      `schede_sicurezza_selezionate_${selected.length}`
+    );
+    toast({
+      title: 'Successo',
+      description: `${selected.length} elementi esportati con successo`,
+    });
   };
 
   const hasActiveFilters = searchQuery || statusFilter !== "all" || dateFrom || dateTo || sortField !== null;
@@ -347,23 +435,66 @@ export default function SafetySheets() {
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+            <h1 className="text-3xl font-semibold text-foreground">
               Schede di Sicurezza
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-muted-foreground">
               Gestione schede di sicurezza con caricamenti per mansione, reparto e ruolo
             </p>
           </div>
-          <Button 
-            onClick={() => setDialogOpen(true)} 
-            variant="outline"
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Nuova Scheda
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Select Elementi per Pagina */}
+            <Select value={perPage.toString()} onValueChange={(value) => setPerPage(Number(value))}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 per pagina</SelectItem>
+                <SelectItem value="25">25 per pagina</SelectItem>
+                <SelectItem value="50">50 per pagina</SelectItem>
+                <SelectItem value="100">100 per pagina</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Dropdown Esporta */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="mr-2 h-4 w-4" />
+                  Esporta
+                  {hasSelection && (
+                    <Badge variant="secondary" className="ml-2">
+                      {selectedIds.size}
+                    </Badge>
+                  )}
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  Esporta CSV (pagina corrente)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  Esporta Excel (pagina corrente)
+                </DropdownMenuItem>
+                {hasSelection && (
+                  <DropdownMenuItem onClick={handleExportSelected}>
+                    Esporta selezionati ({selectedIds.size})
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button 
+              onClick={() => setDialogOpen(true)}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Nuovo MPR
+            </Button>
+          </div>
         </div>
 
         <div className="bg-card border rounded-lg p-4">
@@ -443,6 +574,12 @@ export default function SafetySheets() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">
+                <TableHead className="w-[50px]">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </TableHead>
                 <TableHead className="font-medium text-foreground">
                   <Button
                     variant="ghost"
@@ -494,19 +631,25 @@ export default function SafetySheets() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     Caricamento...
                   </TableCell>
                 </TableRow>
               ) : paginatedElaborations.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     Nessuna scheda di sicurezza trovata
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedElaborations.map((elaboration) => (
                   <TableRow key={elaboration.id} className="hover:bg-muted/20">
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(elaboration.id)}
+                        onCheckedChange={() => toggleSelection(elaboration.id)}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium">{elaboration.title}</div>
@@ -550,7 +693,7 @@ export default function SafetySheets() {
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(elaboration.status)}</TableCell>
-                    <TableCell className="text-muted-foreground">{formatDate(elaboration.begin_process)}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(elaboration.created_at || elaboration.createdAt || elaboration.begin_process)}</TableCell>
                     <TableCell>
                       <div className="flex gap-1 justify-end">
                         <Tooltip>
@@ -614,6 +757,29 @@ export default function SafetySheets() {
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
+          </div>
+        )}
+
+        {/* Info paginazione */}
+        {processedElaborations.length > 0 && (
+          <div className="flex justify-between items-center mt-4 text-sm text-muted-foreground">
+            <div>
+              Mostrando {startIndex + 1} - {Math.min(startIndex + perPage, processedElaborations.length)} di {processedElaborations.length} schede
+            </div>
+            {hasSelection && (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">
+                  {selectedIds.size} selezionati
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSelection}
+                >
+                  Deseleziona tutti
+                </Button>
+              </div>
+            )}
           </div>
         )}
 

@@ -17,7 +17,7 @@ let mockCompanies: Company[] = [
     pec: "bio5@pec.it",
     mansioni: ["Operatore Macchine CNC", "Addetto Magazzino", "Responsabile Qualità"],
     reparti: ["Produzione", "Magazzino", "Qualità", "Amministrazione"],
-    ruoli: ["Operaio Specializzato", "Impiegato", "Responsabile", "Dirigente"],
+    aree: ["Produzione", "Amministrazione"],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   },
@@ -34,7 +34,7 @@ let mockCompanies: Company[] = [
     pec: "techsolutions@pec.it",
     mansioni: ["Sviluppatore Software", "Sistemista", "Project Manager"],
     reparti: ["Sviluppo", "IT", "Gestione Progetti"],
-    ruoli: ["Developer", "Senior Developer", "Team Lead", "Manager"],
+    aree: ["Sviluppo", "Gestione Progetti"],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }
